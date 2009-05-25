@@ -50,11 +50,11 @@ void ConfigurationStore::Reload(const char * uname, const char * upw, const char
 					int len=row[0].length();
 					char * scn = new char [len+1]; *(scn+len)=0; //Gets deleted from Scenclass.
 					strncpy(scn,row[0].c_str(),len);
-					Scens[cnt] = new ScenarioSet();
-					(Scens + cnt)->SetPath(scn);
-					(Scens + cnt)->SetChance(float(row[1]));
-					(Scens + cnt)->SetLeague(float(row[2]));
-					(Scens + cnt)->SetTime(int(row[3]));
+					(*(Scens + cnt)) = new ScenarioSet();
+					(*(Scens + cnt))->SetPath(scn);
+					(*(Scens + cnt))->SetChance(float(row[1]));
+					(*(Scens + cnt))->SetLeague(float(row[2]));
+					(*(Scens + cnt))->SetTime(int(row[3]));
 					//Fix later.
 					ChanceTotal += (**(Scens + cnt)).GetChance();
 				}

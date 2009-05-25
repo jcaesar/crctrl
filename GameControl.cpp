@@ -96,7 +96,7 @@ bool Game::SetScen(const char * scen){
 bool Game::SetScen(const ScenarioSet * scen, bool changeleague){
 	if(Status==Setting){
 		delete [] Settings.Scen;
-		Settings.Scen = new char[strlen(scen->Get()Path)+1];
+		Settings.Scen = new char[strlen(scen->GetPath())+1];
 		strcpy(Settings.Scen,scen->GetPath());
 		Settings.LobbyTime=scen->GetTime();
 		if(changeleague){
@@ -270,7 +270,8 @@ Game::~Game(){
 	cleanup = true;
 	if(use_conds) pthread_cond_signal(&msgcond);
 	Exit(true);
-	kill(pid, SIGKILL); //Make sure, there do not rest clonk <defunct> in the process table. Don't care about errors.
+	kill(pid, SIGKILL); //Make sure, there does nothing rest in the process table
+	wait(pid); //Funny, but Guenther said, it would be usefull against clonk <defunct>
 }
 
 bool Game::Fail(){

@@ -33,11 +33,11 @@ class ScenarioSet {
 		void SetChance(float chance){ if(!Fixed) HostChance=chance;}
 		void SetLeague(float chance){ if(!Fixed) League=chance;}
 		void Fix(){ Fixed=true; }
-		bool IsFixed(){return Fixed;}
-		const char * GetPath() {return ScenPath;}
-		int GetTime() {return LobbyTime;}
-		float GetLeague() {return League;}
-		float GetChance() {return HostChance;}
+		bool IsFixed() const {return Fixed;}
+		const char * GetPath() const {return ScenPath;}
+		int GetTime() const {return LobbyTime;}
+		float GetLeague() const {return League;}
+		float GetChance() const {return HostChance;}
 };
 
 static class ConfigurationStore{ //Just a fucking silly name. I only need it for the Constructor.
