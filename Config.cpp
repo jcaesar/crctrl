@@ -38,8 +38,9 @@ void ConfigurationStore::Reload(const char * uname, const char * upw, const char
 			if(Scens != NULL) {
 				while(ScenCount >= 0) delete *(Scens + (ScenCount--));
 				delete [] Scens;
+				Scens = NULL;
 			}
-			mysqlpp::Query query3 = conn.query("SELECT Path, HostChance, LeagueChance, LobbyTime FROM ScenarioList");
+			mysqlpp::Query query3 = conn.query("SELECT Path, HostChance, LeagueChance, LobbyTime, ScenIndex FROM ScenarioList");
 			if(mysqlpp::UseQueryResult res = query3.use()){
 				Scens = new ScenarioSet * [cnt];
 				ChanceTotal=0;
@@ -50,7 +51,7 @@ void ConfigurationStore::Reload(const char * uname, const char * upw, const char
 					int len=row[0].length();
 					char * scn = new char [len+1]; *(scn+len)=0; //Gets deleted from Scenclass.
 					strncpy(scn,row[0].c_str(),len);
-					(*(Scens + cnt)) = new ScenarioSet();
+					(*(Scens + cnt)) = new ScenarioSet(int(row[4]));
 					(*(Scens + cnt))->SetPath(scn);
 					(*(Scens + cnt))->SetChance(float(row[1]));
 					(*(Scens + cnt))->SetLeague(float(row[2]));
@@ -58,8 +59,31 @@ void ConfigurationStore::Reload(const char * uname, const char * upw, const char
 					//Fix later.
 					ChanceTotal += (**(Scens + cnt)).GetChance();
 				}
+				mysqlpp::Query query4 = conn.query("SELECT ScenIndex, Name FROM ScenarioNames"); 
+				if(mysqlpp::StoreQueryResult names = query4.store()){ //What follows here is fucking silly done. But, what works works.
+					for(cnt=0; cnt<ScenCount; cnt++){
+						int index=Scens[cnt]->GetIndex();
+						int namecnt=0;
+						for(int i=names.num_rows()-1; i>=0; i--){
+							if(index==int(names[i][0])) namecnt++;
+						}
+						char ** nameptr = new char * [namecnt];
+						char ** ptrinst; ptrinst = nameptr;
+						for(int i=names.num_rows()-1; i>=0; i--){
+							if(index==int(names[i][0])) {
+								int len=names[i][1].length()+1;
+								*ptrinst = new char[len];
+								strncpy(*ptrinst, names[i][1].c_str(), len);
+								ptrinst++;
+							}
+						}
+						Scens[cnt]->SetNames(nameptr, namecnt);
+						Scens[cnt]->Fix();
+					}
+				} else {
+					std::cerr << "Error in naming scenarios: " << query4.error() << std::endl;
+				}
 			} else {
-				delete [] Scens; Scens = NULL;
 				std::cerr << "Failed to get scenario list: " << query3.error() << std::endl;
 			}
 		} else {

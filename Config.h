@@ -8,14 +8,24 @@ class ScenarioSet {
 		float League;
 		float HostChance;
 		bool Fixed;
+		const int DbIndex;
 	public:
-		ScenarioSet(bool del=true){
-			NameCount=0;
-			DeleteStrings=true;
+		ScenarioSet(int index, bool del=true) :
+			DbIndex(index),
+			NameCount(0),
+			DeleteStrings(del),
+			ScenPath(NULL)
+		{}
+		~ScenarioSet(){
+			if(DeleteStrings){
+				delete [] ScenPath;
+				while(NameCount--) delete [] *ExtraNames--;
+				delete [] ExtraNames;
+			}
 		}
 		bool SetPath(char * path){
 			if(!Fixed) {
-				if(DeleteStrings) delete [] ScenPath;
+				if(ScenPath && DeleteStrings) delete [] ScenPath;
 				ScenPath=path;
 			}
 		}
@@ -35,6 +45,7 @@ class ScenarioSet {
 		void Fix(){ Fixed=true; }
 		bool IsFixed() const {return Fixed;}
 		const char * GetPath() const {return ScenPath;}
+		int GetIndex() const {return DbIndex;}
 		int GetTime() const {return LobbyTime;}
 		float GetLeague() const {return League;}
 		float GetChance() const {return HostChance;}
