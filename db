@@ -1,0 +1,156 @@
+-- phpMyAdmin SQL Dump
+-- version 2.11.8.1deb5
+-- http://www.phpmyadmin.net
+--
+-- Host: localhost
+-- Erstellungszeit: 28. Mai 2009 um 17:04
+-- Server Version: 5.0.51
+-- PHP-Version: 5.2.6-1+lenny2
+
+SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
+
+--
+-- Datenbank: `crctrl`
+--
+
+-- --------------------------------------------------------
+
+--
+-- Tabellenstruktur für Tabelle `ScenarioList`
+--
+
+CREATE TABLE IF NOT EXISTS `ScenarioList` (
+  `ScenIndex` int(10) unsigned NOT NULL auto_increment,
+  `Path` tinytext NOT NULL,
+  `HTMLName` tinytext NOT NULL,
+  `HostChance` float NOT NULL,
+  `LeagueChance` float NOT NULL,
+  `LobbyTime` smallint(6) NOT NULL,
+  PRIMARY KEY  (`ScenIndex`)
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8 AUTO_INCREMENT=27 ;
+
+--
+-- Daten für Tabelle `ScenarioList`
+--
+
+INSERT INTO `ScenarioList` (`ScenIndex`, `Path`, `HTMLName`, `HostChance`, `LeagueChance`, `LobbyTime`) VALUES
+(1, 'Worlds.c4f/Watercaves.c4s', 'Wasserh&ouml;hlen', 0.3, 0, 210),
+(2, 'Worlds.c4f/FoggyCliffs.c4s', 'Nebelklippen', 0.3, 0, 240),
+(3, 'Z4Effects.c4s', 'Effects', 0.8, 0.05, 180),
+(4, 'Missions.c4f/Rattle.c4s', 'Rattlesnake Canyon', 0.4, 0.8, 180),
+(5, 'Missions.c4f/Treasure.c4s', 'Schatzsuche', 0.4, 0.8, 180),
+(6, 'Melees.c4f/SharkLake.c4s', 'Haifischsee', 0.8, 0.06, 210),
+(7, 'Melees.c4f/Clepal.c4s', 'Clepal', 1, 0.01, 210),
+(8, 'Melees.c4f/MinorMelee.c4s', 'Handgemenge', 1.3, 0.05, 150),
+(9, 'Melees.c4f/Mountaincombat.c4s', 'Berggefecht', 0.8, 0.15, 150),
+(10, 'Knights.c4f/Tournament.c4s', 'Turnier', 0.8, 0.15, 180),
+(11, 'Knights.c4f/Camp.c4s', 'Lager', 0.7, 0.1, 240),
+(12, 'Western.c4f/BankRobbery.c4s', 'Bankraub', 1, 0.02, 180),
+(13, 'Z4OilWars.c4s', 'Oil Wars', 1.5, 0.1, 180),
+(14, 'EkeReloaded.c4f/Equiem.c4s', 'Equiem', 1.2, 0.12, 210),
+(15, 'S2Stylands.c4s', 'Stylands', 1.2, 0.15, 210),
+(16, 'Z4Balance.c4s', 'Balance', 1.2, 0.2, 210),
+(17, 'BridgeFight.c4s', 'Bridge Fight', 1, 0.12, 210),
+(18, 'Airborne Dominance.c4s', 'Luftherrschaft', 1, 0.01, 210),
+(19, 'DepthCharge.c4s', 'Tiefenjagd', 0.5, 0.2, 180),
+(20, 'JungleFlurry.c4s', 'Jungle Flurry', 0.5, 0.2, 180),
+(21, 'KdK.c4s', 'Kampf der Katapulte', 1, 0.02, 200),
+(22, 'QuakeR.c4f/Q_DM-FrostBite.c4s', 'FrostBite', 1, 0.02, 200),
+(23, 'QuakeR.c4f/Q_DM-Renegade.c4s', 'Renegade', 1, 0.02, 200),
+(24, 'Blackfield.c4s', 'Blackfield', 1.2, 0.08, 210),
+(25, 'Western.c4f/DeadMansValley.c4s', 'Dead Man''s Valley', 1, 0.07, 180),
+(26, 'SkyTournament.c4s', 'Sky Tournament', 2, 0, 200);
+
+-- --------------------------------------------------------
+
+--
+-- Tabellenstruktur für Tabelle `ScenarioNames`
+--
+
+CREATE TABLE IF NOT EXISTS `ScenarioNames` (
+  `ScenIndex` int(10) unsigned NOT NULL,
+  `Name` tinytext NOT NULL,
+  KEY `ScenIndex` (`ScenIndex`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+
+--
+-- Daten für Tabelle `ScenarioNames`
+--
+
+INSERT INTO `ScenarioNames` (`ScenIndex`, `Name`) VALUES
+(15, 'Stylands'),
+(1, 'Wasserhölen'),
+(1, 'Wasserhoelen'),
+(2, 'Nebelklippen'),
+(3, 'Effects'),
+(4, 'Rattle'),
+(4, 'Rattlesnake'),
+(4, 'Rattlesnake Canyon'),
+(5, 'Schatzsuche'),
+(6, 'Haifisch'),
+(6, 'Haifischsee'),
+(7, 'Clepal'),
+(8, 'Handgemenge'),
+(8, 'Kleines Handgemenge'),
+(8, 'Kl. Hand.'),
+(8, 'Kl Hand'),
+(9, 'Berggefecht'),
+(10, 'Turnier'),
+(10, 'Ritterturnier'),
+(11, 'Lager'),
+(11, 'Ritterlager'),
+(12, 'Bankraub'),
+(13, 'Oil Wars'),
+(13, 'OW'),
+(14, 'Equiem'),
+(15, 'Sty'),
+(15, 'Stylands'),
+(15, 'Stimmels'),
+(15, 'Stimmelsinseln'),
+(16, 'Balance'),
+(16, 'Bal'),
+(17, 'BrigeFight'),
+(17, 'Bridge Fight'),
+(18, 'Luftherrschaft'),
+(18, 'Luftschiff'),
+(19, 'Tiefenjagd'),
+(20, 'Jungle Flurry'),
+(21, 'KdK'),
+(21, 'Kampf der Katapulte'),
+(21, 'Katapulte'),
+(22, 'FrostBite'),
+(22, 'Frost Bite'),
+(23, 'Renegade'),
+(24, 'Blackfield'),
+(24, 'Bf'),
+(25, 'DMV'),
+(25, 'Dead Mans Valley'),
+(25, 'Dead Man''s Valley'),
+(26, 'ST'),
+(26, 'SkyTournament'),
+(26, 'Sky Tournament');
+
+-- --------------------------------------------------------
+
+--
+-- Tabellenstruktur für Tabelle `Settings`
+--
+
+CREATE TABLE IF NOT EXISTS `Settings` (
+  `Identifier` tinytext character set ascii NOT NULL,
+  `Value` tinytext character set ascii NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=ascii COLLATE=ascii_bin;
+
+--
+-- Daten für Tabelle `Settings`
+--
+
+INSERT INTO `Settings` (`Identifier`, `Value`) VALUES
+('TCPPort', '11122'),
+('UDPPort', '11123'),
+('SignOn', 'true'),
+('LobbyTime', '500'),
+('LeagueChance', '0.5'),
+('Path', '/opt/clonk_rage/'),
+('Record', 'true'),
+('MaxExecTrials', '3');
