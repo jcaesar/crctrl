@@ -172,7 +172,7 @@ int Game::Start(const char * args){
 		strcpy(fullpath, Config.Path);
 		strcpy(fullpath+strlen(Config.Path), "/clonk");
 		execl(fullpath, Config.Path, args, NULL);
-		//When execl does fine, this will never return.
+		//When execl does fine, it will never return.
 		std::cerr << "Could not Start. Error: " << errno << std::endl; //Give parent process a notice.
 		close(fd1[0]);
 		close(fd2[1]);
@@ -208,9 +208,29 @@ void Game::Control(){
 			if(!regex_ret[2].compare("hilf")) {
 				SendMsg("Liste aller Befehle:\n----%list\n--------Listet alle verfügbaren Szenarien auf\n----%start Szenname -lobby:Sekunden -passwort:\"pw\" -liga\n--------Startet ein Szenario. Alles ab -lobby ist optional.\n----%hilf\n--------Gibt das hier aus.\n");
 			} else if(!regex_ret[2].compare("list")) {
-				SendMsg("Noch nicht implementiert.\n");
+				SendMsg("Folgende Szenarien koennen gestartet werden:\n");
+				const ScenarioSet * scn;
+				for(int i=0; scn = Config.GetScen(i); i++){
+					const char * name = scn->GetName(0);
+					if(name){
+						SendMsg("-");
+						int i=0;
+						while(name) {
+							SendMsg(name);
+							name = scn->GetName(++i);
+							if(name) SendMsg(", ");
+						}
+						SendMsg("\n");
+					}
+				}
 			} else if(!regex_ret[2].compare("start")) {
 				SendMsg("Programmierer sind keine Marathonlaeufer. Wart, bis ich es implementiert hab, " + regex_ret[1] + ".\n");
+				/*char * cmd = new char [regex_ret[4].length() + 1]
+				strcpy(cmd, regex_ret[4].data());
+				char * params = strstr(cmd, " -");
+				*params = 0;
+				ScenarioSet * scn = Config.GetScen(cmd);
+				if(scn == 0)*/
 			} else {
 				SendMsg("Es gibt kein Kommando: \"" +regex_ret[2]+ "\". Gib %hilf ein, um alle Kommandos anzuzeigen.\n");
 			}

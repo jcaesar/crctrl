@@ -96,7 +96,7 @@ void ConfigurationStore::Reload(const char * uname, const char * upw, const char
 }
 
 const ScenarioSet * ConfigurationStore::GetScen(int index){
-	if(0 > index || index > ScenCount) {return NULL;}
+	if(0 > index || index >= ScenCount) {return NULL;}
 	return *(index + Scens);
 }
 
@@ -112,6 +112,19 @@ const ScenarioSet * ConfigurationStore::GetScen(){ //Do it by random.
 		raise(SIGSEGV); //If it did not happen earlier.
 	}
 	return (*(ScenInst-1));
+}
+
+const ScenarioSet * ConfigurationStore::GetScen(const char * search){
+	int cnt=ScenCount;
+	ScenarioSet ** ScenInst = Scens;
+	while(cnt--){
+		const char * name;
+		for(int i=0; name=(*ScenInst)->GetName(); i++){
+			if(!strcmp(search, name)) return *ScenInst;
+		}
+		ScenInst++;
+	}
+	return NULL;
 }
 
 #endif

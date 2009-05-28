@@ -50,6 +50,10 @@ class ScenarioSet {
 		int GetTime() const {return LobbyTime;}
 		float GetLeague() const {return League;}
 		float GetChance() const {return HostChance;}
+		const char * GetName(int index=0) const {
+			if(index < 0 || index >= NameCount) return NULL;
+			return *(ExtraNames + index);
+		}
 };
 
 static class ConfigurationStore{ //Just a fucking silly name. I only need it for the Constructor.
@@ -96,4 +100,5 @@ static class ConfigurationStore{ //Just a fucking silly name. I only need it for
 		void Reload(const char *, const char *, const char *, const char * = NULL);
 		const ScenarioSet * GetScen(int);
 		const ScenarioSet * GetScen();
+		const ScenarioSet * GetScen(const char *);
 } Config;
