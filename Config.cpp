@@ -60,7 +60,7 @@ void ConfigurationStore::Reload(const char * uname, const char * upw, const char
 					ChanceTotal += (**(Scens + cnt)).GetChance();
 				}
 				mysqlpp::Query query4 = conn.query("SELECT ScenIndex, Name FROM ScenarioNames"); 
-				if(mysqlpp::StoreQueryResult names = query4.store()){ //What follows here is fucking silly done. But, what works works.
+				if(mysqlpp::StoreQueryResult names = query4.store()){ //What follows here is fucking sillily done. But, what works works.
 					for(cnt=0; cnt<ScenCount; cnt++){
 						int index=Scens[cnt]->GetIndex();
 						int namecnt=0;
@@ -107,6 +107,9 @@ const ScenarioSet * ConfigurationStore::GetScen(){ //Do it by random.
 	while(rnd >= 0){
 		rnd -= (**ScenInst).GetChance();
 		ScenInst++;
+	}
+	if(ScenInst >= Scens + ScenCount) { //Hmm, what now? SigKill? Reload? Quit?
+		raise(SIGSEGV); //If it did not happen earlier.
 	}
 	return (*(ScenInst-1));
 }

@@ -14,7 +14,8 @@ class ScenarioSet {
 			DbIndex(index),
 			NameCount(0),
 			DeleteStrings(del),
-			ScenPath(NULL)
+			ScenPath(NULL),
+			Fixed(false)
 		{}
 		~ScenarioSet(){
 			if(DeleteStrings){
@@ -23,7 +24,7 @@ class ScenarioSet {
 				delete [] ExtraNames;
 			}
 		}
-		bool SetPath(char * path){
+		void SetPath(char * path){
 			if(!Fixed) {
 				if(ScenPath && DeleteStrings) delete [] ScenPath;
 				ScenPath=path;
@@ -31,8 +32,8 @@ class ScenarioSet {
 		}
 		void SetNames(char ** names, int count){
 			if(!Fixed){
-				if(count != 0 && DeleteStrings){
-					while(count--) delete [] *ExtraNames;
+				if(NameCount != 0 && DeleteStrings){
+					while(NameCount--) delete [] *ExtraNames++;
 					delete [] ExtraNames;
 				}
 				ExtraNames=names;
