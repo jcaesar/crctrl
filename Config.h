@@ -1,7 +1,9 @@
+class ScenarioSet;
 class ScenarioSet {
 	private:
 		char * ScenPath;
 		char ** ExtraNames;
+		char * PW;
 		int NameCount;
 		bool DeleteStrings;
 		int LobbyTime;
@@ -15,14 +17,31 @@ class ScenarioSet {
 			NameCount(0),
 			DeleteStrings(del),
 			ScenPath(NULL),
-			Fixed(false)
+			Fixed(false),
+			PW(NULL)
 		{}
 		~ScenarioSet(){
 			if(DeleteStrings){
-				delete [] ScenPath;
-				while(NameCount--) delete [] *ExtraNames--;
-				delete [] ExtraNames;
+				if(ScenPath) delete [] ScenPath;
+				if(ExtraNames) {
+					while(NameCount--) delete [] *ExtraNames--;
+					delete [] ExtraNames;
+				}
 			}
+			if(PW) delete [] PW;
+		}
+		ScenarioSet & ScenarioSet(const ScenarioSet & base) :
+			NameCount (NULL),
+			LobbyTime (false),
+			League (base.League),
+			HostChance (base.HostChance),
+			Fixed(false),
+			DbIndex(base.DbIndex),
+			PW(NULL),
+			DeleteStrings(true)
+		{ //Names and pw will be ignored
+			ScenPath = new char[strlen(base.ScenPath) + 1];
+			strcpy(ScenPath, base.ScenPath);
 		}
 		void SetPath(char * path){
 			if(!Fixed) {
@@ -40,6 +59,13 @@ class ScenarioSet {
 				NameCount=count;
 			}
 		}
+		void SetPW(const char * pw){ //I always copy it, so I always delete it. Why? No idea.
+			if(!Fixed){
+				if(PW) delete [] PW;
+				PW = new char [strlen(pw) + 1];
+				strcpy(PW, pw);
+			}
+		}
 		void SetTime(int time){ if(!Fixed) LobbyTime=time; }
 		void SetChance(float chance){ if(!Fixed) HostChance=chance;}
 		void SetLeague(float chance){ if(!Fixed) League=chance;}
@@ -50,6 +76,7 @@ class ScenarioSet {
 		int GetTime() const {return LobbyTime;}
 		float GetLeague() const {return League;}
 		float GetChance() const {return HostChance;}
+		const char * GetPW() const {return PW;}
 		const char * GetName(int index=0) const {
 			if(index < 0 || index >= NameCount) return NULL;
 			return *(ExtraNames + index);
@@ -100,5 +127,5 @@ static class ConfigurationStore{ //Just a fucking silly name. I only need it for
 		void Reload(const char *, const char *, const char *, const char * = NULL);
 		const ScenarioSet * GetScen(int);
 		const ScenarioSet * GetScen();
-		const ScenarioSet * GetScen(const char *);
+		ScenarioSet * GetScen(const char *);
 } Config;

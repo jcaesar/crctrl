@@ -44,7 +44,8 @@ class Game
 				int UDP;
 				int TCP;
 			} Ports;
-			char *Scen;
+			char * Scen;
+			char * PW;
 		} Settings;
 		bool Selfkill; //Maybe transfer to struct Status, when it's implemented
 		char * OutPrefix;

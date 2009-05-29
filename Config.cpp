@@ -114,7 +114,7 @@ const ScenarioSet * ConfigurationStore::GetScen(){ //Do it by random.
 	return (*(ScenInst-1));
 }
 
-const ScenarioSet * ConfigurationStore::GetScen(const char * search){
+ScenarioSet * ConfigurationStore::GetScen(const char * search){
 	int cnt=ScenCount;
 	ScenarioSet ** ScenInst = Scens;
 	while(cnt--){

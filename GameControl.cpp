@@ -69,6 +69,8 @@ Game::Game(){
 	cleanup=false;
 	tid=NULL;
 	pid=NULL;
+	Settings.Scen = NULL;
+	Settings.PW = NULL;
 	ExecTrials=0;
 	//Standard Settings:
 	Settings.Ports.TCP=Config.Ports.TCP;
@@ -77,7 +79,6 @@ Game::Game(){
 	Settings.SignOn=Config.SignOn;
 	Settings.Record=Config.Record;
 	Settings.League = Config.League > static_cast<float>(rand())/RAND_MAX;
-	Settings.Scen = new char [1];
 	OutPrefix = new char[11];
 	sprintf(OutPrefix, "g#%d", Games.Add(this));
 	Status=Setting;
@@ -85,7 +86,7 @@ Game::Game(){
 
 bool Game::SetScen(const char * scen){
 	if(Status==Setting){
-		delete [] Settings.Scen;
+		if(Settings.Scen) delete [] Settings.Scen;
 		Settings.Scen = new char[strlen(scen)+1];
 		strcpy(Settings.Scen,scen);
 		return true;
@@ -130,6 +131,11 @@ void Game::Start(){
 	if(strlen(Config.ConfigPath)>0){
 		cmd += " /config:\"";
 		cmd += Config.ConfigPath;
+		cmd += "\"";
+	}
+	if(strlen(Settings.PW)>0){
+		cmd += " /pass:\"";
+		cmd += Settings.PW;
 		cmd += "\"";
 	}
 	cmd += " \"";
@@ -224,13 +230,39 @@ void Game::Control(){
 					}
 				}
 			} else if(!regex_ret[2].compare("start")) {
-				SendMsg("Programmierer sind keine Marathonlaeufer. Wart, bis ich es implementiert hab, " + regex_ret[1] + ".\n");
-				/*char * cmd = new char [regex_ret[4].length() + 1]
-				strcpy(cmd, regex_ret[4].data());
+				//SendMsg("Programmierer sind keine Marathonlaeufer. Wart, bis ich es implementiert hab, " + regex_ret[1] + ".\n");
+				char * cmd = new char [regex_ret[4].length() + 1];
+				strncpy(cmd, regex_ret[4].str().data(), regex_ret[4].length() + 1); //I know, .str().data() sucks... Do it better.
 				char * params = strstr(cmd, " -");
 				*params = 0;
 				ScenarioSet * scn = Config.GetScen(cmd);
-				if(scn == 0)*/
+				*params = ' '; 
+				if(scn != 0) {
+					scn = new ScenarioSet(scn); //Make a Copy of it.
+					if(strstr(params, " -liga")) scn -> SetLeague(1);
+					else scn -> SetLeague(0);
+					char * pos;
+					if(pos = strstr(params, "-lobby:")){
+						pos += 7;
+						int time = atoi(pos);
+						if(time > Config.LobbyTime) time = Config.LobbyTime;
+						if(time < 10) time = 10;
+					}
+					if(pos = strstr(params, "-pw:")){
+						pos += 4;
+						char chr = ' ';
+						if(*pos == '"') {chr = '"'; pos++;}
+						char * itr = pos;
+						while(*itr++ != chr);
+						chr = *itr;
+						*itr = 0;
+						scn -> SetPW(pos);
+						*itr = chr; //Actually, that wouldn't be necessary. But I feel it is an itty bit more clean...
+					}
+				} else {
+					SendMsg("Szenario nicht gefunden \"" + cmd + "\"\n");
+				}
+				delete [] cmd;
 			} else {
 				SendMsg("Es gibt kein Kommando: \"" +regex_ret[2]+ "\". Gib %hilf ein, um alle Kommandos anzuzeigen.\n");
 			}
@@ -292,6 +324,9 @@ Game::~Game(){
 	Exit(true);
 	kill(pid, SIGKILL); //Make sure, there does nothing rest in the process table
 	wait(pid); //Funny, but Guenther said, it would be usefull against clonk <defunct>
+	if(Settings.Scen) delete [] Settings.Scen;
+	if(Settings.PW) delete [] Settings.PW;
+	
 }
 
 bool Game::Fail(){
