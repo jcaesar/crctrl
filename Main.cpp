@@ -26,7 +26,7 @@ void CrashHandler(int);
 void EndHandler(int);
 void SigPipeHandler(int);
 
-int main(int argc, char ** argv)
+int main(int argc, char* *argv)
 {
 	signal(SIGBUS, CrashHandler);
 	signal(SIGILL, CrashHandler);
@@ -38,6 +38,12 @@ int main(int argc, char ** argv)
 	signal(SIGINT, EndHandler);
 	signal(SIGPIPE, SigPipeHandler);
 	
+	if(argc <= 4) {
+		std::cerr << printf("Usage: %s %s %s %s %s", *argv, "<mysql-database>", "<mysql-user>", "<mysql-password>", "<autohost>") << std::endl;
+		std::cerr << printf("Example: %s clonk_cserv_database cserv cservs_password 1", *argv);
+		exit(3);
+	}
+	
 	if(argc-- > 0) argv++;
 	bool create_autohost = false; char * db = NULL, * usr = NULL, * pw = NULL, * addr = NULL;
 	while(argc--){
@@ -48,9 +54,9 @@ int main(int argc, char ** argv)
 		else if(!strcmp(*argv, "auto")) create_autohost = true;
 		argv++;
 	}
-	if(usr == 0) usr="crctrl";
-	if(pw == 0) pw=DEFAULT_SQL_PW;
-	if(db == 0) db="crctrl";
+	if(usr == 0) usr = "crctrl";
+	if(pw == 0) pw = DEFAULT_SQL_PW;
+	if(db == 0) db = "crctrl";
 	Config.Reload(usr,pw,db,addr);
 	if(strcmp(pw, DEFAULT_SQL_PW)) while(*pw != 0) *pw++=NULL; //Eleminate the pw from ram by overwriting it. (But don't overwrite the default.)
 	if(create_autohost) new AutoHost();

@@ -7,9 +7,9 @@ OBJ = AutoHost.o Config.o Control.o GameControl.o Lib.o Main.o
 main = Main.cpp
 
 cserv: $(main)
-	$(CC) $(CFLAGS) -o cserv $(main) $(LDFLAGS)
+	$(CC) $(CFLAGS) -o crlcrtrl $(main) $(LDFLAGS)
 all: $(OBJ)
-	$(CC) $(CFLAGS) -o cserv $(OBJ) $(LDFLAGS)
+	$(CC) $(CFLAGS) -o crlcrtrl $(OBJ) $(LDFLAGS)
 
 %.o: %.cpp
 	$(CC) $(CFLAGS) -c $<
