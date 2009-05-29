@@ -37,13 +37,7 @@ int main(int argc, char* *argv)
 	signal(SIGTERM, CrashHandler);
 	signal(SIGINT, EndHandler);
 	signal(SIGPIPE, SigPipeHandler);
-	
-	if(argc <= 4) {
-		std::cerr << printf("Usage: %s %s %s %s %s", *argv, "<mysql-database>", "<mysql-user>", "<mysql-password>", "<autohost>") << std::endl;
-		std::cerr << printf("Example: %s clonk_cserv_database cserv cservs_password 1", *argv);
-		exit(3);
-	}
-	
+		
 	if(argc-- > 0) argv++;
 	bool create_autohost = false; char * db = NULL, * usr = NULL, * pw = NULL, * addr = NULL;
 	while(argc--){
@@ -52,6 +46,11 @@ int main(int argc, char* *argv)
 		else if(!strncmp(*argv, "pw:", 3)) pw=*argv+3;
 		else if(!strncmp(*argv, "addr:", 5)) addr=*argv+5;
 		else if(!strcmp(*argv, "auto")) create_autohost = true;
+		else {
+			std::cerr << printf("Usage: %s %s %s %s %s", *argv, "db:<mysql-database>", "usr:<mysql-user>", "pw:<mysql-password>", "[auto]") << std::endl;
+			std::cerr << printf("Example: %s db:clonk_cserv_database usr:cserv pw:cservs_password auto", *argv);
+			exit(3);
+		}
 		argv++;
 	}
 	if(usr == 0) usr = "crctrl";
