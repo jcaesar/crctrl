@@ -5,10 +5,13 @@ class AutoHost{
 		static void * ThreadWrapper(void *);
 		void Work();
 		bool work;
+		pthread_mutex_t mutex;
+		std::vector <const ScenarioSet*> ScenQueue;
 	public:
 		AutoHost();
 		~AutoHost();
 		Game * GetGame();
+		bool Enqueue(const ScenarioSet *);
 };
 
 static class AutoHostList{

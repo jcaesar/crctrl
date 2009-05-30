@@ -63,7 +63,7 @@ void StreamControl::Work(){
 		} else {
 			if(Games.Exists(sel)) {
 				cmd += "\n";
-				sel->SendMsg(cmd.c_str());
+				sel->SendMsg(cmd.c_str(), NULL);
 			}
 		}
 	} //sr is invalid after that.

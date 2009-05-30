@@ -20,6 +20,19 @@ class ScenarioSet {
 			Fixed(false),
 			PW(NULL)
 		{}
+		ScenarioSet(const ScenarioSet * base) :
+			NameCount (NULL),
+			LobbyTime (base->LobbyTime),
+			League (base->League),
+			HostChance (base->HostChance),
+			Fixed(false),
+			DbIndex(base->DbIndex),
+			PW(NULL),
+			DeleteStrings(true)
+		{ //Names and pw will be ignored
+			ScenPath = new char[strlen(base->ScenPath) + 1];
+			strcpy(ScenPath, base->ScenPath);
+		}
 		~ScenarioSet(){
 			if(DeleteStrings){
 				if(ScenPath) delete [] ScenPath;
@@ -29,19 +42,6 @@ class ScenarioSet {
 				}
 			}
 			if(PW) delete [] PW;
-		}
-		ScenarioSet & ScenarioSet(const ScenarioSet & base) :
-			NameCount (NULL),
-			LobbyTime (false),
-			League (base.League),
-			HostChance (base.HostChance),
-			Fixed(false),
-			DbIndex(base.DbIndex),
-			PW(NULL),
-			DeleteStrings(true)
-		{ //Names and pw will be ignored
-			ScenPath = new char[strlen(base.ScenPath) + 1];
-			strcpy(ScenPath, base.ScenPath);
 		}
 		void SetPath(char * path){
 			if(!Fixed) {
@@ -101,6 +101,7 @@ static class ConfigurationStore{ //Just a fucking silly name. I only need it for
 		int ScenCount;
 		float ChanceTotal;
 		int MaxExecTrials;
+		int MaxQueueSize;
 	public:
 		ConfigurationStore(){
 			Path = new char[1];
@@ -117,6 +118,7 @@ static class ConfigurationStore{ //Just a fucking silly name. I only need it for
 			League=0.5f;
 			ScenCount=0;
 			ChanceTotal=0;
+			MaxQueueSize=3;
 			SignOn=true;
 			delete [] Path;
 			Path = new char[11];

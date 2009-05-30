@@ -8,13 +8,14 @@ void ConfigurationStore::Reload(const char * uname, const char * upw, const char
 	if (conn.connect(dbname, address, uname, upw)) {
 		mysqlpp::Query query1 = conn.query("SELECT Identifier, Value FROM Settings");
 		if (mysqlpp::UseQueryResult res = query1.use()) {
-			while(mysqlpp::Row row=res.fetch_row()) {
+			while(mysqlpp::Row row=res.fetch_row()) { //What about an hash-array and clean getters?
 				if(		!row[0].compare("LobbyTime"))    LobbyTime=int(row[1]);
 				else if(!row[0].compare("LeagueChance")) League=float(row[1]);
 				else if(!row[0].compare("SignOn"))       SignOn=(!row[1].compare("false")?false:true);
 				else if(!row[0].compare("Record"))       Record=(!row[1].compare("true")?true:false);
 				else if(!row[0].compare("TCPPort"))      Ports.TCP=int(row[1]);
 				else if(!row[0].compare("UDPPort"))      Ports.UDP=int(row[1]);
+				else if(!row[0].compare("MaxQueueSize")) MaxQueueSize=int(row[1]);
 				else if(!row[0].compare("MaxExecTrials"))MaxExecTrials=int(row[1]);
 				else if(!row[0].compare("ConfigPath")){
 					delete [] ConfigPath;
@@ -119,7 +120,7 @@ ScenarioSet * ConfigurationStore::GetScen(const char * search){
 	ScenarioSet ** ScenInst = Scens;
 	while(cnt--){
 		const char * name;
-		for(int i=0; name=(*ScenInst)->GetName(); i++){
+		for(int i=0; name=(*ScenInst)->GetName(i); i++){
 			if(!strcmp(search, name)) return *ScenInst;
 		}
 		ScenInst++;

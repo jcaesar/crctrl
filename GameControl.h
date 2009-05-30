@@ -68,8 +68,8 @@ class Game
 		}
 		Game();
 		void Start();
-		bool SendMsg(const char *);
-		void SendMsg(const char *, int);
+		bool SendMsg(const char *, ...);
+		void SendMsg(int, const char *, ...);
 		bool SendMsg(const std::string);
 		void Exit(bool, bool);
 		void AwaitEnd();

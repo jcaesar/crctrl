@@ -133,7 +133,7 @@ void Game::Start(){
 		cmd += Config.ConfigPath;
 		cmd += "\"";
 	}
-	if(strlen(Settings.PW)>0){
+	if(Settings.PW && strlen(Settings.PW)>0){
 		cmd += " /pass:\"";
 		cmd += Settings.PW;
 		cmd += "\"";
@@ -208,82 +208,96 @@ void Game::Control(){
 	boost::smatch regex_ret;
 	//std::getline(pipe_in,line); //This does wtf not work. 'no matching function' coqsucking
 	while(sr->ReadLine(&line)){
-		Out.Put(OutPrefix, " ", line.c_str(), NULL);
+		Out.Put(OutPrefix, " ", line.c_str(), NULL); //This is not real logic, but I don't care for now... Perhaps the NULL terminates the list and the c_str.
 		//Scan for events
 		if(regex_match(line, regex_ret, rx::cm_base)){
-			if(!regex_ret[2].compare("hilf")) {
-				SendMsg("Liste aller Befehle:\n----%list\n--------Listet alle verfügbaren Szenarien auf\n----%start Szenname -lobby:Sekunden -passwort:\"pw\" -liga\n--------Startet ein Szenario. Alles ab -lobby ist optional.\n----%hilf\n--------Gibt das hier aus.\n");
+			if(!regex_ret[2].compare("hilf") || !regex_ret[2].compare("help")) {
+				SendMsg("Liste aller Befehle:\n----%list\n--------Listet alle verfügbaren Szenarien auf\n----%start Szenname -lobby:Sekunden -passwort:\"pw\" -liga\n--------Startet ein Szenario. Alles ab -lobby ist optional.\n----%hilf\n--------Gibt das hier aus.\n", NULL);
 			} else if(!regex_ret[2].compare("list")) {
-				SendMsg("Folgende Szenarien koennen gestartet werden:\n");
+				StringCollector list("Folgende Szenarien koennen gestartet werden:\n");
 				const ScenarioSet * scn;
 				for(int i=0; scn = Config.GetScen(i); i++){
 					const char * name = scn->GetName(0);
 					if(name){
-						SendMsg("-");
+						list.Push("-");
 						int i=0;
 						while(name) {
-							SendMsg(name);
+							list.Push(name);
 							name = scn->GetName(++i);
-							if(name) SendMsg(", ");
+							if(name) list.Push(", ");
 						}
-						SendMsg("\n");
+						list.Push("\n");
 					}
 				}
+				SendMsg(list.GetBlock(), NULL);
 			} else if(!regex_ret[2].compare("start")) {
-				//SendMsg("Programmierer sind keine Marathonlaeufer. Wart, bis ich es implementiert hab, " + regex_ret[1] + ".\n");
-				char * cmd = new char [regex_ret[4].length() + 1];
-				strncpy(cmd, regex_ret[4].str().data(), regex_ret[4].length() + 1); //I know, .str().data() sucks... Do it better.
-				char * params = strstr(cmd, " -");
-				*params = 0;
-				ScenarioSet * scn = Config.GetScen(cmd);
-				*params = ' '; 
-				if(scn != 0) {
-					scn = new ScenarioSet(scn); //Make a Copy of it.
-					if(strstr(params, " -liga")) scn -> SetLeague(1);
-					else scn -> SetLeague(0);
-					char * pos;
-					if(pos = strstr(params, "-lobby:")){
-						pos += 7;
-						int time = atoi(pos);
-						if(time > Config.LobbyTime) time = Config.LobbyTime;
-						if(time < 10) time = 10;
+				AutoHost * ah = AutoHosts.FindByGame(this);
+				if(ah){
+					char * cmd = new char [regex_ret[4].length() + 1];
+					strncpy(cmd, regex_ret[4].str().data(), regex_ret[4].length() + 1); //I know, .str().data() sucks... Do it better.
+					char * params = strstr(cmd, " -");
+					ScenarioSet * scn;
+					if(params){
+						*params = 0;
+						scn = Config.GetScen(cmd);
+						*params = ' ';
+					} else scn = Config.GetScen(cmd);
+					if(scn != 0) {
+						scn = new ScenarioSet(scn); //Make a Copy of it.
+						if(strstr(cmd, " -liga")) scn -> SetLeague(1);
+						else scn -> SetLeague(0);
+						char * pos;
+						if(pos = strstr(cmd, "-lobby:")){
+							pos += 7;
+							int time = atoi(pos);
+							if(time > Config.LobbyTime) time = Config.LobbyTime;
+							if(time < 10) time = 10;
+						}
+						if(pos = strstr(cmd, "-pw:")){
+							pos += 4;
+							char chr = ' ';
+							if(*pos == '"') {chr = '"'; pos++;}
+							char * itr = pos;
+							while(*itr++ != chr);
+							chr = *itr;
+							*itr = 0;
+							scn -> SetPW(pos);
+							*itr = chr; //Actually, that wouldn't be necessary. But I feel it is an itty bit more clean...
+						}
+						if(ah -> Enqueue(scn)){ //Perhaps I should Fix() the scenario...
+							SendMsg("Szenario \"", scn->GetPath(), "\" wurde der Liste hinzugefuegt.\n", NULL);
+						} else {
+							SendMsg("Es dürfen Maximal ", Config.MaxQueueSize, " Szenarien in die Warteliste gesetzt werden.\n", NULL);
+							delete [] scn; //Retour
+						}
+					} else {
+						SendMsg("Szenario nicht gefunden \"", cmd, "\"\n", NULL);
 					}
-					if(pos = strstr(params, "-pw:")){
-						pos += 4;
-						char chr = ' ';
-						if(*pos == '"') {chr = '"'; pos++;}
-						char * itr = pos;
-						while(*itr++ != chr);
-						chr = *itr;
-						*itr = 0;
-						scn -> SetPW(pos);
-						*itr = chr; //Actually, that wouldn't be necessary. But I feel it is an itty bit more clean...
-					}
+					delete [] cmd;
 				} else {
-					SendMsg("Szenario nicht gefunden \"" + cmd + "\"\n");
+					SendMsg("Dieses Spiel wurde manuell, (vermutlich zu Testzwecken), gestartet, deshalb kann kein weiteres Spiel gestartet werden.\n");
 				}
-				delete [] cmd;
 			} else {
-				SendMsg("Es gibt kein Kommando: \"" +regex_ret[2]+ "\". Gib %hilf ein, um alle Kommandos anzuzeigen.\n");
+				SendMsg("Es gibt kein Kommando: \"", regex_ret[2].str().data(), "\". Gib %hilf ein, um alle Kommandos anzuzeigen.\n", NULL);
 			}
 		} else if(Status==Lobby){
 			if(regex_match(line, rx::gm_gohot)) {
-				SendMsg("Jetzt geht es los!\n");
-				SendMsg("Viel Glueck und viel Spass!\n");
+				SendMsg("Jetzt geht es los!\n", NULL);
+				SendMsg("Viel Glueck und viel Spass!\n", NULL);
 			} else if(regex_match(line, regex_ret, rx::cl_join)){
-				SendMsg("Hi! Viel Spass beim Spielen, " + regex_ret[1] + ".\n");
-				SendMsg("Mehr ueber diesen Server erfaehrst du unter cserv.game-host.org\nJeder kann bestimmen, was gehostet wird. Gib %hilf ein!\n", 2);
+				SendMsg("Hi! Viel Spass beim Spielen, ", regex_ret[1].str().data(), ".\n", NULL);
+				SendMsg(2, "Mehr ueber diesen Server erfaehrst du unter cserv.game-host.org\nJeder kann bestimmen, was gehostet wird. Gib %hilf ein!\n", NULL);
 			} else if(regex_match(line, regex_ret, rx::cl_part)){
-				SendMsg("Boeh, " + regex_ret[1] + " ist ein Leaver.\n");
+				SendMsg("Boeh, ", regex_ret[1].str().data(), " ist ein Leaver.\n", NULL);
 			} else if(regex_match(line, rx::gm_load)){
 				Status=Load;
 			}
 		} else if(Status==Run) {
 			if(regex_match(line, regex_ret, rx::pl_die)){
-				SendMsg("Wie die Fliegen, wie die Fliegen. Pass das naechste mal besser auf, " + regex_ret[1] + ", du Tropf.\n.");
+				SendMsg("Wie die Fliegen, wie die Fliegen. Pass das naechste mal besser auf, ", regex_ret[1].str().data(), ", du Tropf.\n.", NULL);
 			} else if(regex_match(line, rx::gm_tick0)){
-				SendMsg("/me r0kt!\n");
-				SendMsg("/set maxplayer 1\n", 20);
+				SendMsg("/me r0kt!\n", NULL);
+				SendMsg(20, "/set maxplayer 1\n", NULL);
 			}
 		} else if(Status==Load) {
 			if(regex_match(line, rx::gm_go)){
@@ -296,7 +310,7 @@ void Game::Control(){
 			}
 			if(regex_match(line, rx::gm_lobby)){
 				Status=Lobby;
-				SendMsg("/set maxplayer 1337\n");
+				SendMsg("/set maxplayer 1337\n", NULL);
 			}
 		}
 		line = "";
@@ -360,26 +374,45 @@ void * Game::MsgThreadWrapper(void * p) {
 	return NULL;
 }
 
-bool Game::SendMsg(const char * msg){
-	int len=strlen(msg);
+bool Game::SendMsg(const char * first, ...){
 	if(!pipe_out) return false;
-	if(*msg=='/') //Some commands don't have feedback. Just do a notification.
-		Out.Put(OutPrefix, " ", msg, NULL);
-	return (write(pipe_out, msg, len)==len);
+	va_list vl;
+	va_start(vl, first);
+	StringCollector msg(first);
+	const char * str;
+	while(str = va_arg(vl, const char *))
+		msg.Push(str);
+	//if(str + strlen(str) -1 != '\n') msg.Push("\n");
+	msg.GetBlock();
+	va_end(vl);
+	if(*(msg.GetBlock())=='/') //Some commands don't have feedback. Just do a notification.
+		Out.Put(OutPrefix, " ", msg.GetBlock(), NULL);
+	return (write(pipe_out, msg.GetBlock(), msg.GetLength())==msg.GetLength());
 }
 
-void Game::SendMsg(const char * msg, int secs){
+void Game::SendMsg(int secs, const char * first, ...){
+	int stamp = time(NULL) + secs; //Conserv
+	va_list vl;
+	va_start(vl, first);
+	StringCollector msg(first);
+	const char * str;
+	while(str = va_arg(vl, const char *))
+		msg.Push(str);
+	//if(str + strlen(str) -1 != '\n') msg.Push("\n");
+	msg.GetBlock(); 
+	va_end(vl);
+	//pthread_mutex_lock(&mutex);
 	TimedMsg * tmsg = new TimedMsg; //Deleted in Game::MsgTimer
-	tmsg->Stamp = time(NULL) + secs;
-	tmsg->Msg = new char[strlen(msg)+1]; //Deleted in D'tor of struct
-	strcpy(tmsg->Msg,msg);
+	tmsg->Stamp = stamp;
+	tmsg->Msg = new char[msg.GetLength()+1]; //Deleted in D'tor of struct TimedMsg
+	strcpy(tmsg->Msg,msg.GetBlock());
 	MsgQueue.push_back(tmsg); //No need to lock here.
 	if(use_conds) pthread_cond_signal(&msgcond); //Update
 }
 
 
 bool Game::SendMsg(const std::string msg){
-	return SendMsg(msg.c_str());
+	return SendMsg(msg.c_str(), NULL);
 }
 
 void Game::MsgTimer(){
@@ -396,7 +429,7 @@ void Game::MsgTimer(){
 		nextevent=0;
 		int i=MsgQueue.size(); while(i-->0){
 			if(MsgQueue[i]->Stamp <= time(NULL)){
-				SendMsg(MsgQueue[i]->Msg);
+				SendMsg(MsgQueue[i]->Msg, NULL);
 				delete MsgQueue[i];
 				MsgQueue.erase(MsgQueue.begin()+i);
 			} else {
