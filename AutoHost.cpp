@@ -20,10 +20,13 @@ void AutoHost::Work(){
 	while(work){
 		CurrentGame = new Game();
 		pthread_mutex_lock(&mutex);
-		if(ScenQueue.empty())CurrentGame -> SetScen(Config.GetScen());
+		if(ScenQueue.empty()) CurrentGame -> SetScen(Config.GetScen());
 		else {
-			CurrentGame -> SetScen(ScenQueue[0]);
-			delete [] ScenQueue[0];
+			const ScenarioSet * scn;
+			try {scn = ScenQueue.at(0);} //Vector sux, dunno why.
+			catch (...) {continue;}
+			CurrentGame -> SetScen(scn);
+			delete scn;
 			ScenQueue.erase(ScenQueue.begin());
 		}
 		pthread_mutex_unlock(&mutex);

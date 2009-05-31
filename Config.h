@@ -18,10 +18,12 @@ class ScenarioSet {
 			DeleteStrings(del),
 			ScenPath(NULL),
 			Fixed(false),
-			PW(NULL)
+			PW(NULL),
+			ExtraNames(NULL)
 		{}
 		ScenarioSet(const ScenarioSet * base) :
-			NameCount (NULL),
+			NameCount (0),
+			ExtraNames (NULL),
 			LobbyTime (base->LobbyTime),
 			League (base->League),
 			HostChance (base->HostChance),
