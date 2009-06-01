@@ -267,8 +267,8 @@ void Game::Control(){
 						if(ah -> Enqueue(scn)){ //Perhaps I should Fix() the scenario...
 							SendMsg("Szenario \"", scn->GetPath(), "\" wurde der Liste hinzugefuegt.\n", NULL);
 						} else {
-							SendMsg("Es dürfen Maximal ", Config.MaxQueueSize, " Szenarien in die Warteliste gesetzt werden.\n", NULL);
-							delete [] scn; //Retour
+							SendMsg("Maximale Groesse der Warteliste ueberschritten.\n", NULL);
+							delete scn; //Retour
 						}
 					} else {
 						SendMsg("Szenario nicht gefunden \"", cmd, "\"\n", NULL);
