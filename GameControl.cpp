@@ -265,7 +265,7 @@ void Game::Control(){
 							*itr = chr; //Actually, that wouldn't be necessary. But I feel it is an itty bit more clean...
 						}
 						if(ah -> Enqueue(scn)){ //Perhaps I should Fix() the scenario...
-							SendMsg("Szenario \"", scn->GetPath(), "\" wurde der Liste hinzugefuegt.\n", NULL);
+							SendMsg("Szenario \"", scn->GetPath(), "\" wurde der Warteliste hinzugefuegt.\n", NULL);
 						} else {
 							SendMsg("Maximale Groesse der Warteliste ueberschritten.\n", NULL);
 							delete scn; //Retour
