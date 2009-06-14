@@ -1,23 +1,5 @@
--- phpMyAdmin SQL Dump
--- version 2.11.8.1deb5
--- http://www.phpmyadmin.net
---
--- Host: localhost
--- Erstellungszeit: 31. Mai 2009 um 18:47
--- Server Version: 5.0.51
--- PHP-Version: 5.2.6-1+lenny3
-
 SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
 
---
--- Datenbank: `crctrl`
---
-
--- --------------------------------------------------------
-
---
--- Tabellenstruktur für Tabelle `ScenarioList`
---
 
 CREATE TABLE IF NOT EXISTS `ScenarioList` (
   `ScenIndex` int(10) unsigned NOT NULL auto_increment,
@@ -28,10 +10,6 @@ CREATE TABLE IF NOT EXISTS `ScenarioList` (
   `LobbyTime` smallint(6) NOT NULL,
   PRIMARY KEY  (`ScenIndex`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=utf8 AUTO_INCREMENT=36 ;
-
---
--- Daten für Tabelle `ScenarioList`
---
 
 INSERT INTO `ScenarioList` (`ScenIndex`, `Path`, `HTMLName`, `HostChance`, `LeagueChance`, `LobbyTime`) VALUES
 (1, 'Worlds.c4f/Watercaves.c4s', 'Wasserh&ouml;hlen', 0, 0, 210),
@@ -68,21 +46,12 @@ INSERT INTO `ScenarioList` (`ScenIndex`, `Path`, `HTMLName`, `HostChance`, `Leag
 (34, 'EkeReloaded.c4f/MeltMe.c4s', 'MeltMe', 0.5, 0.3, 180),
 (35, 'Western.c4f/CaptureTheFlag.c4s', 'Flaggen der Ehre', 0.1, 0, 240);
 
--- --------------------------------------------------------
-
---
--- Tabellenstruktur für Tabelle `ScenarioNames`
---
 
 CREATE TABLE IF NOT EXISTS `ScenarioNames` (
   `ScenIndex` int(10) unsigned NOT NULL,
   `Name` tinytext NOT NULL,
   KEY `ScenIndex` (`ScenIndex`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
---
--- Daten für Tabelle `ScenarioNames`
---
 
 INSERT INTO `ScenarioNames` (`ScenIndex`, `Name`) VALUES
 (15, 'Stylands'),
@@ -154,20 +123,11 @@ INSERT INTO `ScenarioNames` (`ScenIndex`, `Name`) VALUES
 (35, 'FdE'),
 (35, 'CTF');
 
--- --------------------------------------------------------
-
---
--- Tabellenstruktur für Tabelle `Settings`
---
 
 CREATE TABLE IF NOT EXISTS `Settings` (
   `Identifier` tinytext character set ascii NOT NULL,
   `Value` tinytext character set ascii NOT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=ascii COLLATE=ascii_bin;
-
---
--- Daten für Tabelle `Settings`
---
 
 INSERT INTO `Settings` (`Identifier`, `Value`) VALUES
 ('TCPPort', '11122'),
