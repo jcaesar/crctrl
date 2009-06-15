@@ -334,24 +334,23 @@ void Game::Exit(bool wait = true, bool soft = true){
 
 Game::~Game(){
 	cleanup = true;
-	if(use_conds) pthread_cond_signal(&msgcond);
 	Exit(true);
+	if(use_conds) pthread_cond_signal(&msgcond);
 	kill(pid, SIGKILL); //Make sure, there does nothing rest in the process table
-	wait(pid); //Funny, but Guenther said, it would be usefull against clonk <defunct>
+	waitpid(pid, NULL, WNOHANG); //Funny, but Guenther said, it would be usefull against clonk <defunct>
 	if(Settings.Scen) delete [] Settings.Scen;
 	if(Settings.PW) delete [] Settings.PW;
-	
+	pthread_cancel(msgtid);
+	pthread_cond_destroy(&msgcond);
+	pthread_mutex_destroy(&msgmutex);
 }
 
 bool Game::Fail(){
 	ExecTrials++;
 	if(ExecTrials >= Config.MaxExecTrials) {
 		Out.Put(OutPrefix, " Maximum execution attempts exceeded.", NULL);
-		AutoHost * ah = AutoHosts.FindByGame(this);
-		if(ah!=NULL) 
-			delete ah; //Will delete this anyway.
-		else 
-			if(Selfkill) delete this;
+		Status = Failed;
+		if(Selfkill) delete this;
 		pthread_exit(NULL);
 	} else {
 		sleep(5);

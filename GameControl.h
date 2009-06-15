@@ -1,4 +1,4 @@
-enum GameStatus {Setting, PreLobby, Lobby, Load, Run, End};
+enum GameStatus {Setting, PreLobby, Lobby, Load, Run, End, Failed};
 struct TimedMsg{time_t Stamp; char * Msg; ~TimedMsg(){if(Msg != NULL) delete Msg;}};
 
 class Game;
@@ -51,10 +51,10 @@ class Game
 		char * OutPrefix;
 		GameStatus Status;
 		int ExecTrials;
+		pthread_t msgtid;
 		pthread_cond_t msgcond;
 		pthread_mutex_t msgmutex;
 		bool use_conds;
-		pthread_t msgtid;
 		bool cleanup;
 		int Start(const char *);
 		bool Fail();
@@ -83,4 +83,5 @@ class Game
 		bool SetLobbyTime(int secs){if(Status==Setting){Settings.LobbyTime=secs; return true;} return false;}
 		char * GetName() const{return OutPrefix;}
 		void KillOnEnd(bool yes=true) {Selfkill=yes;}
+		GameStatus GetStatus() const {return Status;}
 };

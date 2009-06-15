@@ -1,3 +1,18 @@
+#include <iostream>
+#include <string>
+#include <vector>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <errno.h>
+#include <signal.h>
+#include <time.h>
+#include <math.h>
+#include <pthread.h>
+#include <boost/regex.hpp>
+#include <mysql++.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 namespace rx{
 	static boost::regex ctrl_err	("^Could not Start\\. Error: ");
@@ -36,133 +51,11 @@ namespace rx{
 	//[16:58:32] <CServ> %start sty*/
 }
 
-bool startswith(const std::string *str1, const std::string *str2){
-	int len=str2->length();
-	if(len > str1->length()) return 0;
-	return (memcmp(str1->data(), str2->data(), len)==0);
-}
+#include "helpers/StringFunctions.cpp"
 
-bool startswith(const std::string *str1, const char *str2){
-	int len=strlen(str2);
-	if(len > str1->length()) return 0;
-	return (memcmp(str1->data(), str2, len)==0);
-}
+#include "helpers/StringCollector.cpp"
 
-bool startswith(const std::string *str1, const char str2_2){
-	const char *str2; str2=&str2_2;
-	int len=strlen(str2);
-	if(len > str1->length()) return 0;
-	return (memcmp(str1->data(), str2, len)==0);
-}
-
-class StringCollector{
-	private:
-		const char * data;
-		StringCollector * next;
-		bool string_complete;
-		bool delete_data;
-		int length;
-	public:
-		StringCollector(const char * string = NULL) : data(string), next(NULL), length(-1), string_complete(0), delete_data(false) {}
-		~StringCollector() {
-			if(next != NULL) delete next;
-			if(string_complete || delete_data) delete [] data;
-		}
-		int GetLength(bool renew = false){
-			if(length == -1 || renew) {
-				length = strlen(data);
-				if(next) length += next->GetLength();
-			}
-			return length;
-		}
-		const char * GetBlock(){
-			if(!string_complete){
-				int len=GetLength();
-				char * temp = new char[len+1];
-				char * jump; jump = temp;
-				StringCollector * itr; itr=this;
-				while(itr){
-					strcpy(jump, itr->data);
-					jump += strlen(itr->data);
-					itr = itr->next;
-				}
-				data = temp;
-				if(next) {
-					delete next;
-					next = NULL;
-				}
-				length = GetLength(true);
-				string_complete = true;
-			}
-			return data;
-		}
-		bool Push(const char * push){
-			if(string_complete) return false;
-			if(next) return next->Push(push);
-			next = new StringCollector(push);
-			length = -1;
-			return true;
-		}
-		bool Push(const int push){
-			if(string_complete) return false;
-			if(next) return next->Push(push);
-			char * tmp = new char[11];
-			sprintf(tmp, "%d", push);
-			next = new StringCollector(tmp);
-			next -> delete_data = true;
-			length = -1;
-			return true;
-		}
-		StringCollector& operator+=(const char * push){Push(push); return *this;}
-		StringCollector& operator+=(const int push)   {Push(push); return *this;}
-};
-
-#ifndef MAXCHARS
-	#define MAXCHARS 128
-#endif
-
-class StreamReader{
-	private:
-		int rv;
-		char *buff;
-		char *buffadr;
-		char *buffadr2;
-	public:
-		const int fd;
-		StreamReader(const int fd_read) : fd(fd_read) {
-			buffadr=new char[MAXCHARS];
-			buff=buffadr;
-			rv=0;
-		}
-		~StreamReader(){delete[] buffadr; close(fd);}
-		bool ReadLine(std::string *line){return(ReadLine(line, 10));}
-		bool ReadLine(std::string *line, const char delim){
-			*line="";
-			do{
-				//std::cout << reinterpret_cast<int>(buffadr) << " " << reinterpret_cast<int>(buff) << " " << rv << std::endl;
-				if(buffadr+rv > buff){ //I left things behind, last time.
-					buffadr2=buff;
-					while(*buff and *buff!=delim) buff++;
-					if(*buff==delim){ //This is the case, when there was found a completed line.
-						*buff=0;
-						buff++;
-						*line += buffadr2;
-						break;
-					}
-					*line += buffadr2;
-				}
-				buff = buffadr;
-				if((rv = read(fd, buff, MAXCHARS-1)) <= 0) {
-					close(fd);
-					delete this; //This happens, when fd has EoF.
-					return false;
-				}
-				buff = buffadr;
-				*(buff+rv)=0;
-			} while(*buff!=0);
-			return true;
-		}
-};
+#include "helpers/StreamReader.cpp"
 
 class OutprintControl;
 static class OutprintControl{

@@ -1,18 +1,5 @@
-//#include "Umlaut.hpp"
-#include <iostream>
-#include <string>
-#include <vector>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <errno.h>
-#include <signal.h>
-#include <time.h>
-#include <math.h>
-#include <pthread.h>
-#include <boost/regex.hpp>
-#include <mysql++.h>
 #include "Lib.cpp"
+//#include "Umlaut.hpp"
 #include "Config.h"
 #include "Config.cpp"
 #include "GameControl.h"
@@ -20,6 +7,7 @@
 #include "GameControl.cpp"
 #include "Control.h"
 #include "Control.cpp"
+
 #define DEFAULT_SQL_PW "sLZpTCMMHZmnvebA"
 
 void CrashHandler(int);
@@ -53,11 +41,11 @@ int main(int argc, char* *argv)
 		}
 		argv++;
 	}
-	if(usr == 0) usr = "crctrl";
-	if(pw == 0) pw = DEFAULT_SQL_PW;
-	if(db == 0) db = "crctrl";
+	if(usr == 0) {usr = new char[7]; strcpy(usr, "crctrl");}
+	if(pw == 0) {pw = new char [strlen(DEFAULT_SQL_PW)+1]; strcpy(pw, DEFAULT_SQL_PW);}
+	if(db == 0) {db = new char[7]; strcpy(db, "crctrl");}
 	Config.Reload(usr,pw,db,addr);
-	if(strcmp(pw, DEFAULT_SQL_PW)) while(*pw != 0) *pw++=NULL; //Eleminate the pw from ram by overwriting it. (But don't overwrite the default.)
+	while(*pw != 0) *pw++=NULL; //Eleminate the pw from ram by overwriting it.
 	if(create_autohost) new AutoHost();
 	new StreamControl(STDIN_FILENO,STDOUT_FILENO);
 	while(true) sleep(10);

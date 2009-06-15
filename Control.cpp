@@ -43,8 +43,8 @@ void StreamControl::Work(){
 			if((cmd.find(" nosignup "))!=-1){
 				sel->SetSignOn(false);
 			}
-			sel->Start();
 			sel->KillOnEnd();
+			sel->Start();
 		} else if(!cmd.compare("%auto")) {
 			new AutoHost();
 		} else if(!cmd.compare("%end")) {

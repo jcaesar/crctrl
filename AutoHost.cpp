@@ -1,7 +1,7 @@
 #ifndef AutoHostCpp
 #define AutoHostCpp
 
-AutoHost::AutoHost() : work(true) {
+AutoHost::AutoHost() : work(true), Fails(0) {
 	AutoHosts.Add(this);
 	pthread_mutex_init(&mutex, NULL);
 	pthread_create(&tid, NULL, &AutoHost::ThreadWrapper, this);
@@ -31,8 +31,12 @@ void AutoHost::Work(){
 		}
 		pthread_mutex_unlock(&mutex);
 		CurrentGame -> Start();
-		CurrentGame -> KillOnEnd();
-		CurrentGame -> AwaitEnd(); //This is no clean programming. After KillOnEnd, the Pointer may not be used anymore. FIXME, or better fix KillOnEnd
+		CurrentGame -> AwaitEnd();
+		if(CurrentGame -> GetStatus() == Failed) {
+			Fails++;
+			if(Fails >= Config.MaxExecTrials) break;
+		} else Fails = 0;
+		delete CurrentGame;
 	}
 }
 
