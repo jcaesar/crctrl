@@ -11,6 +11,7 @@ AutoHost::~AutoHost(){
 	work = false;
 	delete CurrentGame; //This is crazy. It calls the destructor, which makes CR halt, and waits for the thread wich is waiting for CR to end...
 		//But I think it will crash.
+	CurrentGame = NULL;
 	pthread_join(tid, NULL); //And my own thread will end when all that is done.
 	pthread_mutex_destroy(&mutex);
 	AutoHosts.Remove(this);
@@ -34,7 +35,7 @@ void AutoHost::Work(){
 		CurrentGame -> AwaitEnd();
 		if(CurrentGame -> GetStatus() == Failed) {
 			Fails++;
-			if(Fails >= Config.MaxExecTrials) break;
+			if(Fails >= Config.MaxExecTrials) delete this;
 		} else Fails = 0;
 		delete CurrentGame;
 	}

@@ -121,7 +121,7 @@ ScenarioSet * ConfigurationStore::GetScen(const char * search){
 	while(cnt--){
 		const char * name;
 		for(int i=0; name=(*ScenInst)->GetName(i); i++){
-			if(!nocasecmp(search, name)) return *ScenInst;
+			if(nocasecmp(search, name)) return *ScenInst;
 		}
 		ScenInst++;
 	}

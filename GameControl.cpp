@@ -438,8 +438,6 @@ void Game::MsgTimer(){
 	}
 	use_conds=false;
 	pthread_mutex_unlock(&msgmutex);
-	pthread_mutex_destroy(&msgmutex);
-	pthread_cond_destroy(&msgcond);
 }
 
 #endif
