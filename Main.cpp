@@ -25,7 +25,7 @@ int main(int argc, char* *argv)
 	signal(SIGTERM, CrashHandler);
 	signal(SIGINT, EndHandler);
 	signal(SIGPIPE, SigPipeHandler);
-		
+
 	if(argc-- > 0) argv++;
 	bool create_autohost = false; char * db = NULL, * usr = NULL, * pw = NULL, * addr = NULL;
 	while(argc--){
