@@ -85,14 +85,21 @@ class ScenarioSet {
 		}
 };
 
-static class ConfigurationStore{ //Just a fucking silly name. I only need it for the Constructor.
+static class ConfigurationStore{ //Just a fucking silly name. I only need it for the Constructor and the func-declarations.
 	private:
 		pthread_mutex_t mutex;
+		struct{
+			const char * usr;
+			const char * pw;
+			const char * db;
+			const char * addr;
+		} Login;
 	public: //FIXME!
 		struct{
 			int TCP;
 			int UDP;
 		} Ports;
+		int QueryPort;
 		int LobbyTime;
 		float League;
 		bool SignOn;
@@ -106,8 +113,9 @@ static class ConfigurationStore{ //Just a fucking silly name. I only need it for
 		int MaxQueueSize;
 	public:
 		ConfigurationStore(){
-			Path = new char[1];
-			ConfigPath = new char[1];
+			SetLoginData("crctrl", DEFAULT_SQL_PW, "crctrl", NULL); Login.addr = NULL;
+			Path = NULL;
+			ConfigPath = NULL;
 			pthread_mutex_init(&mutex, NULL);
 			ScenCount=0;
 			Scens = NULL;
@@ -116,6 +124,7 @@ static class ConfigurationStore{ //Just a fucking silly name. I only need it for
 		void Standard(){
 			Ports.TCP=11112;
 			Ports.UDP=11113;
+			QueryPort=11110;
 			LobbyTime=180;
 			League=0.5f;
 			ScenCount=0;
@@ -128,8 +137,9 @@ static class ConfigurationStore{ //Just a fucking silly name. I only need it for
 			delete [] ConfigPath;
 			ConfigPath = new char[1];
 		}
-		void Reload(const char *, const char *, const char *, const char * = NULL);
+		void Reload();
 		const ScenarioSet * GetScen(int);
 		const ScenarioSet * GetScen();
 		ScenarioSet * GetScen(const char *);
+		void SetLoginData(const char *, const char *, const char *, const char *);
 } Config;

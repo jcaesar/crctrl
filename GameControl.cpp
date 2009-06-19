@@ -148,65 +148,66 @@ int Game::Start(const char * args){
 	int fd1[2];
 	int fd2[2];
 	int fderr[2];
-	Out.Put(OutPrefix, " ", "Starting Round: ", args, NULL);
+	pid_t child, realchild;
+	int status;
 	Status=PreLobby;
 	if ( (pipe(fd1) < 0) || (pipe(fd2) < 0) || (pipe(fderr) < 0) ){
 		std::cerr << "Error opening Pipes." << std::endl;
+		Fail();
 		return -2;
 	}
-	if ( (pid = fork()) < 0 ){
-		std::cerr << "Error forking process." << std::endl;
-		return -3;
-	}
-	else  if (pid == 0){     // CHILD PROCESS
-		close(fd1[1]);
-		close(fd2[0]);
-		close(fderr[0]);
-		if (fd1[0] != STDIN_FILENO){
-			if (dup2(fd1[0], STDIN_FILENO) != STDIN_FILENO) std::cerr << "Error with stdin" << std::endl;
+	child = fork();
+	if(child < 0) { std::cerr << "Error forking process." << std::endl; Fail(); return -3;}
+	if(child == 0){
+		child = fork();
+		if(child < 0) exit(1);
+		if(child == 0){
+			close(fd1[1]);
+			close(fd2[0]);
+			close(fderr[0]);
+			if (fd1[0] != STDIN_FILENO){
+				if (dup2(fd1[0], STDIN_FILENO) != STDIN_FILENO) std::cerr << "Error with stdin" << std::endl;
+				close(fd1[0]);
+			}
+			if (fd2[1] != STDOUT_FILENO){
+				if (dup2(fd2[1], STDOUT_FILENO) != STDOUT_FILENO) std::cerr << "Error with stdout" << std::endl;
+				close(fd2[1]);
+			}
+			if (fderr[1] != STDERR_FILENO){
+				if (dup2(fderr[1], STDERR_FILENO) != STDERR_FILENO) std::cerr << "Error with stderr" << std::endl;
+				close(fderr[1]);
+			}
+			char * fullpath = new char[strlen(Config.Path) + 7];
+			strcpy(fullpath, Config.Path);
+			strcpy(fullpath+strlen(Config.Path), "/clonk");
+			execl(fullpath, Config.Path, args, NULL); //Think about replacing this by another function. Perhaps you need to get to that exit(child) down there...
+			//When execl does fine, it will never return.
+			std::cerr << "Could not Start. Error: " << errno << std::endl; //Give parent process a notice.
 			close(fd1[0]);
-		}
-		if (fd2[1] != STDOUT_FILENO){
-			if (dup2(fd2[1], STDOUT_FILENO) != STDOUT_FILENO) std::cerr << "Error with stdout" << std::endl;
 			close(fd2[1]);
-		}
-		if (fderr[1] != STDERR_FILENO){
-			if (dup2(fderr[1], STDERR_FILENO) != STDERR_FILENO) std::cerr << "Error with stderr" << std::endl;
 			close(fderr[1]);
 		}
-		char * fullpath = new char[strlen(Config.Path) + 7];
-		strcpy(fullpath, Config.Path);
-		strcpy(fullpath+strlen(Config.Path), "/clonk");
-		execl(fullpath, Config.Path, args, NULL);
-		//When execl does fine, it will never return.
-		std::cerr << "Could not Start. Error: " << errno << std::endl; //Give parent process a notice.
-		close(fd1[0]);
-		close(fd2[1]);
-		close(fderr[1]);
-		exit(-4);
+		exit(child); // damit init (A) als Vater übernimmt und liefert PID vom Enkel als exit status "böser" hack
 	}
-	else
-	{
-		close(fd1[0]);
-		close(fd2[1]);
-		close(fderr[1]);
-		sr=new StreamReader(fd2[0]);
-		pipe_out=fd1[1];
-		pipe_err=fderr[0];
-		if(tid==0){
-			pthread_create(&tid, NULL, &Game::ControlThreadWrapper, this);
-			pthread_create(&msgtid, NULL, &Game::MsgThreadWrapper, this);
-		} else {
-			Control();
-		}
-	}
-	return 0;
+	waitpid(child, &status, 0);
+	pid = WEXITSTATUS(status);
+	close(fd1[0]);
+	close(fd2[1]);
+	close(fderr[1]);
+	sr=new StreamReader(fd2[0]);
+	pipe_out=fd1[1];
+	pipe_err=fderr[0];
+	if(tid==0){ //Hu? I don't get the point behind my own thing anymore...
+		pthread_create(&tid, NULL, &Game::ControlThreadWrapper, this);
+		pthread_create(&msgtid, NULL, &Game::MsgThreadWrapper, this);
+	} else {
+		Control();
+	}	
 }
 
 void Game::Control(){
 	std::string line;
 	boost::smatch regex_ret;
-	//std::getline(pipe_in,line); //This does wtf not work. 'no matching function' coqsucking
 	while(sr->ReadLine(&line)){
 		Out.Put(OutPrefix, " ", line.c_str(), NULL); //This is not real logic, but I don't care for now... Perhaps the NULL terminates the list and the c_str.
 		//Scan for events
@@ -328,16 +329,17 @@ void Game::Exit(bool wait = true, bool soft = true){
 			pipe_out=0;
 			//I just hope, that CR closes by saying this. If it does not, I will have Thread and memory leaks...
 		}
-	else kill(pid, SIGKILL);
+	else if(pid > 0) kill(pid, SIGKILL);
 	if(wait) AwaitEnd();
 }
 
 Game::~Game(){
+	Games.Delete(this);
 	cleanup = true;
 	Exit(true);
 	if(use_conds) pthread_cond_signal(&msgcond);
-	kill(pid, SIGKILL); //Make sure, there does nothing rest in the process table
-	waitpid(pid, NULL, WNOHANG); //Funny, but Guenther said, it would be usefull against clonk <defunct>
+	if(pid > 0) kill(pid, SIGKILL); //Make sure, there does nothing rest in the process table
+	waitpid(pid, NULL, WNOHANG); //Funny, but Guenther said, it would be usefull against clonk <defunct>. But it is not.
 	if(Settings.Scen) delete [] Settings.Scen;
 	if(Settings.PW) delete [] Settings.PW;
 	pthread_cancel(msgtid);

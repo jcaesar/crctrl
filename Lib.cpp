@@ -9,10 +9,13 @@
 #include <time.h>
 #include <math.h>
 #include <pthread.h>
-#include <boost/regex.hpp>
-#include <mysql++.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <boost/regex.hpp>
+#include <mysql++.h>
 
 namespace rx{
 	static boost::regex ctrl_err	("^Could not Start\\. Error: ");

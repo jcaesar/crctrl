@@ -1,3 +1,5 @@
+#define DEFAULT_SQL_PW "sLZpTCMMHZmnvebA"
+
 #include "Lib.cpp"
 //#include "Umlaut.hpp"
 #include "Config.h"
@@ -7,8 +9,6 @@
 #include "GameControl.cpp"
 #include "Control.h"
 #include "Control.cpp"
-
-#define DEFAULT_SQL_PW "sLZpTCMMHZmnvebA"
 
 void CrashHandler(int);
 void EndHandler(int);
@@ -41,14 +41,39 @@ int main(int argc, char* *argv)
 		}
 		argv++;
 	}
-	if(usr == 0) {usr = new char[7]; strcpy(usr, "crctrl");}
-	if(pw == 0) {pw = new char [strlen(DEFAULT_SQL_PW)+1]; strcpy(pw, DEFAULT_SQL_PW);}
-	if(db == 0) {db = new char[7]; strcpy(db, "crctrl");}
-	Config.Reload(usr,pw,db,addr);
-	while(*pw != 0) *pw++=NULL; //Eleminate the pw from ram by overwriting it.
+	Config.SetLoginData(usr,pw,db,addr);
+	Config.Reload();
 	if(create_autohost) new AutoHost();
 	new StreamControl(STDIN_FILENO,STDOUT_FILENO);
-	while(true) sleep(10);
+	
+	int       list_s;                /*  listening socket          */
+    int       conn_s;                /*  connection socket         */
+    struct    sockaddr_in servaddr;  /*  socket address structure  */
+	#define Deathloop while(true) sleep(100);
+    if ((list_s = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) {
+		std::cerr << "Error creating listening socket.\n";
+		Deathloop
+    }
+	memset(&servaddr, 0, sizeof(servaddr));
+    servaddr.sin_family      = AF_INET;
+    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    servaddr.sin_port        = htons(Config.QueryPort);
+    if (bind(list_s, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
+		std::cerr << "Could not bind to socket.\n";
+		Deathloop
+    }
+    if (listen(list_s, 8) < 0 ) {
+		std::cerr << "Could not listen to socket.\n";
+		Deathloop
+    }
+    while (1) {
+		if ((conn_s = accept(list_s, NULL, NULL) ) < 0 ) {
+			std::cerr << "Could not accept connection.\n";
+			break;
+		}
+		new StreamControl(conn_s, conn_s);
+    }
+	Deathloop
 }
 
 void EndHandler(int signo){

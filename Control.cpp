@@ -55,9 +55,11 @@ void StreamControl::Work(){
 				if(cmd.compare("%kill forced")) sel->Exit(false, false);
 				else sel->Exit();
 			}
+		} else if(!cmd.compare("%reload")) {
+			Config.Reload();
 		} else if(startswith(&cmd,"%sel ")) {
 			sel = Games.Find(cmd.data() + 5);
-			if(sel == NULL) Out.Put("No such game", cmd.data() + 5, NULL);
+			if(sel == NULL) Out.Put("No such game: ", cmd.data() + 5, NULL);
 		} else if(startswith(&cmd,"%")){
 			Out.Put("No such command: ", cmd.data(), NULL);
 		} else {
@@ -67,9 +69,10 @@ void StreamControl::Work(){
 			}
 		}
 	} //sr is invalid after that.
+	delete this;
 }
 
-void * StreamControl::ThreadWrapper(void *p) { //I wonder why I don't need a static here. Or better: I MAY NOT use it...
+void * StreamControl::ThreadWrapper(void *p) { //I wonder why I don't need a static here. (but in the .h) Or better: I MAY NOT use it...
 	static_cast<StreamControl*>(p)->Work(); 
 	return NULL;
 }

@@ -1,11 +1,17 @@
 #ifndef ConfigCpp
 #define ConfigCpp
+void ConfigurationStore::SetLoginData(const char * usr, const char * pw, const char * db, const char * addr){
+	if(usr != NULL) Login.usr = usr;
+	if(pw != NULL) Login.pw = pw;
+	if(db != NULL) Login.db = db;
+	if(addr != NULL) Login.addr = addr;
+}
 
-void ConfigurationStore::Reload(const char * uname, const char * upw, const char * dbname, const char * address){
+void ConfigurationStore::Reload(){
 	pthread_mutex_lock(&mutex);
 	Standard();
 	mysqlpp::Connection conn(false);
-	if (conn.connect(dbname, address, uname, upw)) {
+	if (conn.connect(Login.db, Login.addr, Login.usr, Login.pw)) {
 		mysqlpp::Query query1 = conn.query("SELECT Identifier, Value FROM Settings");
 		if (mysqlpp::UseQueryResult res = query1.use()) {
 			while(mysqlpp::Row row=res.fetch_row()) { //What about an hash-array and clean getters?
@@ -15,6 +21,7 @@ void ConfigurationStore::Reload(const char * uname, const char * upw, const char
 				else if(!row[0].compare("Record"))       Record=(!row[1].compare("true")?true:false);
 				else if(!row[0].compare("TCPPort"))      Ports.TCP=int(row[1]);
 				else if(!row[0].compare("UDPPort"))      Ports.UDP=int(row[1]);
+				else if(!row[0].compare("QueryPort"))    QueryPort=int(row[1]);
 				else if(!row[0].compare("MaxQueueSize")) MaxQueueSize=int(row[1]);
 				else if(!row[0].compare("MaxExecTrials"))MaxExecTrials=int(row[1]);
 				else if(!row[0].compare("ConfigPath")){
