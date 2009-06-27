@@ -99,6 +99,8 @@ bool Game::SetScen(const ScenarioSet * scen, bool changeleague){
 		delete [] Settings.Scen;
 		Settings.Scen = new char[strlen(scen->GetPath())+1];
 		strcpy(Settings.Scen,scen->GetPath());
+		Settings.PW = new char[strlen(scen->GetPW())+1];
+		strcpy(Settings.PW,scen->GetPW());
 		Settings.LobbyTime=scen->GetTime();
 		if(changeleague){
 			srand((unsigned)time(NULL)); 
@@ -248,14 +250,15 @@ void Game::Control(){
 						if(strstr(cmd, " -liga")) scn -> SetLeague(1);
 						else scn -> SetLeague(0);
 						char * pos;
-						if(pos = strstr(cmd, "-lobby:")){
-							pos += 7;
+						if(pos = strstr(cmd, " -lobby:")){
+							pos += 8;
 							int time = atoi(pos);
 							if(time > Config.LobbyTime) time = Config.LobbyTime;
 							if(time < 10) time = 10;
+							scn -> SetTime(time);
 						}
-						if(pos = strstr(cmd, "-pw:")){
-							pos += 4;
+						if(pos = strstr(cmd, " -pw:")){
+							pos += 5;
 							char chr = ' ';
 							if(*pos == '"') {chr = '"'; pos++;}
 							char * itr = pos;

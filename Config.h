@@ -113,7 +113,7 @@ static class ConfigurationStore{ //Just a fucking silly name. I only need it for
 		int MaxQueueSize;
 	public:
 		ConfigurationStore(){
-			SetLoginData("crctrl", DEFAULT_SQL_PW, "crctrl", NULL); Login.addr = NULL;
+			SetLoginData(DEFAULT_SQL_NAME, DEFAULT_SQL_PW, DEFAULT_SQL_DB, NULL); Login.addr = NULL;
 			Path = NULL;
 			ConfigPath = NULL;
 			pthread_mutex_init(&mutex, NULL);
