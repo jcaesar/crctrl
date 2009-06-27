@@ -345,6 +345,7 @@ Game::~Game(){
 	waitpid(pid, NULL, WNOHANG); //Funny, but Guenther said, it would be usefull against clonk <defunct>. But it is not.
 	if(Settings.Scen) delete [] Settings.Scen;
 	if(Settings.PW) delete [] Settings.PW;
+	delete [] OutPrefix;
 	pthread_cancel(msgtid);
 	pthread_cond_destroy(&msgcond);
 	pthread_mutex_destroy(&msgmutex);
