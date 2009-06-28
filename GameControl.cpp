@@ -99,8 +99,10 @@ bool Game::SetScen(const ScenarioSet * scen, bool changeleague){
 		delete [] Settings.Scen;
 		Settings.Scen = new char[strlen(scen->GetPath())+1];
 		strcpy(Settings.Scen,scen->GetPath());
-		Settings.PW = new char[strlen(scen->GetPW())+1];
-		strcpy(Settings.PW,scen->GetPW());
+		if(scen->GetPW() && strlen(scen->GetPW())){
+			Settings.PW = new char[strlen(scen->GetPW())+1];
+			strcpy(Settings.PW,scen->GetPW());
+		}
 		Settings.LobbyTime=scen->GetTime();
 		if(changeleague){
 			srand((unsigned)time(NULL)); 

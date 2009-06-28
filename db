@@ -1,7 +1,7 @@
 SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
 
 
-CREATE TABLE IF NOT EXISTS `ScenarioList` (
+CREATE TABLE `ScenarioList` (
   `ScenIndex` int(10) unsigned NOT NULL auto_increment,
   `Path` tinytext NOT NULL,
   `HTMLName` tinytext NOT NULL,
@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS `ScenarioList` (
   `LeagueChance` float NOT NULL,
   `LobbyTime` smallint(6) NOT NULL,
   PRIMARY KEY  (`ScenIndex`)
-) ENGINE=MyISAM  DEFAULT CHARSET=utf8 AUTO_INCREMENT=36 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8 AUTO_INCREMENT=37 ;
 
 INSERT INTO `ScenarioList` (`ScenIndex`, `Path`, `HTMLName`, `HostChance`, `LeagueChance`, `LobbyTime`) VALUES
 (1, 'Worlds.c4f/Watercaves.c4s', 'Wasserh&ouml;hlen', 0, 0, 210),
@@ -38,16 +38,17 @@ INSERT INTO `ScenarioList` (`ScenIndex`, `Path`, `HTMLName`, `HostChance`, `Leag
 (24, 'Blackfield.c4s', 'Blackfield', 1.2, 0.08, 210),
 (25, 'Western.c4f/DeadMansValley.c4s', 'Dead Man''s Valley', 0, 0.07, 180),
 (26, 'SkyTournament.c4s', 'Sky Tournament', 2, 0, 200),
-(27, 'Western.c4s/ShootTheSheriff.c4s', 'Shoot the Sherrif', 1, 0, 210),
-(28, 'MmgZ.c4s', 'Magier mit gl&auml;zenden Zauberst&auml;ben', 0.8, 0.01, 210),
-(32, 'TypeFight.c4s', 'TypeFight', 0.8, 0, 180),
+(27, 'Western.c4f/ShootTheSheriff.c4s', 'Shoot the Sherrif', 1, 0, 210),
+(28, 'MmgZ.c4s', 'Magi mit gl&auml;zenden Zauberst&auml;ben', 0.8, 0.01, 210),
+(32, 'JCTypeFight.c4s', 'TypeFight', 0.8, 0, 180),
 (31, 'Z4Adept.c4s', 'Adept', 0.5, 0.1, 180),
 (33, 'EkeReloaded.c4f/AirbikeFight.c4s', 'Airbike Fight', 0, 0, 180),
 (34, 'EkeReloaded.c4f/MeltMe.c4s', 'MeltMe', 0.5, 0.3, 180),
-(35, 'Western.c4f/CaptureTheFlag.c4s', 'Flaggen der Ehre', 0.1, 0, 240);
+(35, 'Western.c4f/CaptureTheFlag.c4s', 'Flaggen der Ehre', 0.1, 0, 240),
+(36, 'Knights.c4f/CoFuT.c4s', 'CoFuT', 0.1, 0, 600);
 
 
-CREATE TABLE IF NOT EXISTS `ScenarioNames` (
+CREATE TABLE `ScenarioNames` (
   `ScenIndex` int(10) unsigned NOT NULL,
   `Name` tinytext NOT NULL,
   KEY `ScenIndex` (`ScenIndex`)
@@ -121,10 +122,13 @@ INSERT INTO `ScenarioNames` (`ScenIndex`, `Name`) VALUES
 (34, 'Melt Me'),
 (35, 'Flaggen der Ehre'),
 (35, 'FdE'),
-(35, 'CTF');
+(35, 'CTF'),
+(36, 'CoFuT'),
+(36, 'oFuT'),
+(36, 'Ohne Furcht und Tadel');
 
 
-CREATE TABLE IF NOT EXISTS `Settings` (
+CREATE TABLE `Settings` (
   `Identifier` tinytext character set ascii NOT NULL,
   `Value` tinytext character set ascii NOT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=ascii COLLATE=ascii_bin;
