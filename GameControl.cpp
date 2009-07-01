@@ -192,9 +192,11 @@ int Game::Start(const char * args){
 			close(fderr[1]);
 		}
 		exit(child); // damit init (A) als Vater übernimmt und liefert PID vom Enkel als exit status "böser" hack
+		raise(SIGKILL); //FIXME!
 	}
-	waitpid(child, &status, 0);
-	pid = WEXITSTATUS(status);
+	pid = NULL; //FIXME!
+	/*waitpid(child, &status, 0);
+	pid = WEXITSTATUS(status);*/
 	close(fd1[0]);
 	close(fd2[1]);
 	close(fderr[1]);
