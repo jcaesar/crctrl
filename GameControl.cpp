@@ -191,7 +191,7 @@ int Game::Start(const char * args){
 			close(fd2[1]);
 			close(fderr[1]);
 		}
-		exit(child); // damit init (A) als Vater übernimmt und liefert PID vom Enkel als exit status "böser" hack
+		//exit(child); // damit init (A) als Vater übernimmt und liefert PID vom Enkel als exit status "böser" hack
 		raise(SIGKILL); //FIXME!
 	}
 	pid = NULL; //FIXME!
