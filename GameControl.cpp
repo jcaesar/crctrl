@@ -68,6 +68,7 @@ Game::Game(){
 	use_conds = true;
 	cleanup=false;
 	tid=NULL;
+	msgtid=NULL;
 	pid=NULL;
 	Settings.Scen = NULL;
 	Settings.PW = NULL;
@@ -293,36 +294,17 @@ void Game::Control(){
 				SendMsg("Jetzt geht es los!\n", NULL);
 				SendMsg("Viel Glueck und viel Spass!\n", NULL);
 			} else if(regex_match(line, regex_ret, rx::cl_join)){
-				mysqlpp::Connection conn(false);
-				if (conn.connect(Login.db, Login.addr, Login.usr, Login.pw)) {
-					std::string querystring;
-					
-					//Hier werden die einzelnen Bestandteile zusamemngesetzt
-					querystring = "SELECT (`cause`) FROM 'banned_people' WHERE `pc-name`='";
-					querystring += regex_ret[1].str().data();
-					querystring += "' OR `ip-address`='";
-					querystring += "255.255.255.0'"; //NOT YET IMPLENTENED!!! TODO
-					//Ende Bestandteile
-					
-					mysqlpp::Query query1 = conn.query(querystring.c_str());
-					
-					if (mysqlpp::UseQueryResult res = query1.use()) {
-						while(mysqlpp::Row row=res.fetch_row()) { //What about an hash-array and clean getters?
-							if(row[0] != []) {
-								SendMsg("Sorry, ", regex_ret[1].str().data(), " aber du stehst auf meiner Abschussliste. (", row[0], ")\n");
-								sleep(2000); //EVIL HACK!! FIX THIS!!
-								SendMsg("/kick", regex_ret[1].str().data(), "\n");
-							}
-						}
-					}
+				if(const char * reason = Config.GetBan(regex_ret[1].str().c_str())){
+					SendMsg("Sorry, ", regex_ret[1].str().data(), " aber du stehst auf meiner Abschussliste. (", reason, ")\n");
+					SendMsg(3, "/kick", regex_ret[1].str().data(), "\n");
 				}
 				else {				
 				SendMsg("Hi! Viel Spass beim Spielen, ", regex_ret[1].str().data(), ".\n", NULL);
 				SendMsg(2, "Mehr ueber diesen Server erfaehrst du unter cserv.game-host.org\nJeder kann bestimmen, was gehostet wird. Gib %hilf ein!\n", NULL);
 				}
 			} else if(regex_match(line, regex_ret, rx::cl_part)){
-				SendMsg("Boeh, ", regex_ret[1].str().data(), " ist ein Leaver. 3 Minuten Bann!\n", NULL);
-				mysqlpp::Connection conn(false);
+				SendMsg("Boeh, ", regex_ret[1].str().data(), " ist ein Leaver.\n", NULL);
+				/*mysqlpp::Connection conn(false);
 				if (conn.connect(Login.db, Login.addr, Login.usr, Login.pw)) {
 					std::string querystring;
 					
@@ -339,8 +321,7 @@ void Game::Control(){
 				}
 				else {
 					SendMsg("Hast Glück gehabt, ", regex_ret[1].str().data(), ", der MySQL-Server ist tot.\n", NULL);
-				}
-					
+				}*/
 			} else if(regex_match(line, rx::gm_load)){
 				Status=Load;
 			}
@@ -370,6 +351,7 @@ void Game::Control(){
 	if(Status==PreLobby) Fail();
 	sr = NULL;
 	Out.Put(OutPrefix, " Clonk Rage terminated.", NULL);
+	msgtid=0;
 	if(Selfkill) delete this;
 }
 
@@ -394,7 +376,7 @@ Game::~Game(){
 	if(Settings.Scen) delete [] Settings.Scen;
 	if(Settings.PW) delete [] Settings.PW;
 	delete [] OutPrefix;
-	pthread_cancel(msgtid);
+	if(msgtid) {pthread_cancel(msgtid); msgtid=NULL;}
 	pthread_cond_destroy(&msgcond);
 	pthread_mutex_destroy(&msgmutex);
 }

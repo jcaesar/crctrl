@@ -97,6 +97,37 @@ void ConfigurationStore::Reload(){
 		} else {
 			std::cerr << "Failed to get scenario count: " << query2.error() << std::endl;
 		}
+		mysqlpp::Query query5 = conn.query("SELECT Count(*) FROM Bans"); 
+		if(mysqlpp::UseQueryResult res = query5.use()){
+			int cnt = int(res.fetch_row()[0]);
+			while(res.fetch_row());
+			mysqlpp::Query query6 = conn.query("SELECT Name, Reason FROM Bans"); 
+			if(mysqlpp::UseQueryResult bans = query6.use()){
+				Bans = new BanSet*[cnt];
+				BanCount = cnt;
+				while(mysqlpp::Row row=bans.fetch_row()) {
+					cnt--;
+					if(cnt < 0) break;
+					int len = row[0].length()+1;
+					char * nameps = new char[len];
+					strncpy(nameps,row[0].c_str(),len);
+					len = row[1].length()+1;
+					char * reason = new char[len];
+					strncpy(reason,row[1].c_str(),len);
+					boost::regex * namepat;
+					try {*namepat = nameps;}
+					catch (boost::regex_error& e) {
+						std::cerr << "Ban error: " << nameps << " is not a valid regular expression: \"" << e.what() << "\"" << std::endl;
+						*namepat = "^$";
+					}
+					(*(Bans + cnt)) = new BanSet(namepat, reason);
+				}
+			} else {
+				std::cerr << "Error in retriving Bans: " << query6.error() << std::endl;
+			}
+		} else {
+			std::cerr << "Error in counting Bans: " << query5.error() << std::endl;
+		}	
 	} else {
 		std::cerr << "DB connection failed: " << conn.error() << std::endl;
 	}
@@ -109,6 +140,8 @@ const ScenarioSet * ConfigurationStore::GetScen(int index){
 }
 
 const ScenarioSet * ConfigurationStore::GetScen(){ //Do it by random.
+	if(ScenCount == 0) return NULL; //No Scen = Silly person.
+	if(ScenCount == 1) return *Scens;  //One Scen = Bla, that's not gonna segv anymore, so noone testing could be annoyed.
 	srand((unsigned)time(NULL)); 
 	double rnd=fmod(rand(), ChanceTotal*16) / 16;
 	ScenarioSet ** ScenInst = Scens;
@@ -131,6 +164,17 @@ ScenarioSet * ConfigurationStore::GetScen(const char * search){
 			if(nocasecmp(search, name)) return *ScenInst;
 		}
 		ScenInst++;
+	}
+	return NULL;
+}
+
+const char * ConfigurationStore::GetBan(const char * name){
+	int cnt = BanCount;
+	BanSet ** BanInst; BanInst = Bans;
+	while(cnt--){
+		if(regex_match(name, *((*BanInst)->NamePattern))){
+			return (*BanInst)->Reason;
+		}
 	}
 	return NULL;
 }

@@ -85,7 +85,15 @@ class ScenarioSet {
 		}
 };
 
-static class ConfigurationStore{ //Just a fucking silly name. I only need it for the Constructor and the func-declarations.
+struct BanSet {
+	boost::regex * NamePattern;
+	const char * Reason;
+	BanSet(boost::regex * namepat, char * reason):
+		NamePattern (namepat), Reason (reason)
+	{}
+};
+
+static class ConfigurationStore{ //Just a silly name. I only need it for the Constructor and the func-declarations.
 	private:
 		pthread_mutex_t mutex;
 		struct{
@@ -108,6 +116,8 @@ static class ConfigurationStore{ //Just a fucking silly name. I only need it for
 		char * ConfigPath;
 		ScenarioSet ** Scens;
 		int ScenCount;
+		BanSet ** Bans;
+		int BanCount;
 		float ChanceTotal;
 		int MaxExecTrials;
 		int MaxQueueSize;
@@ -119,6 +129,8 @@ static class ConfigurationStore{ //Just a fucking silly name. I only need it for
 			pthread_mutex_init(&mutex, NULL);
 			ScenCount=0;
 			Scens = NULL;
+			BanCount=0;
+			Bans = NULL;
 			Standard();
 		}
 		void Standard(){
@@ -142,4 +154,5 @@ static class ConfigurationStore{ //Just a fucking silly name. I only need it for
 		const ScenarioSet * GetScen();
 		ScenarioSet * GetScen(const char *);
 		void SetLoginData(const char *, const char *, const char *, const char *);
+		const char * GetBan(const char *);
 } Config;
