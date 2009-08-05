@@ -296,14 +296,14 @@ void Game::Control(){
 			} else if(regex_match(line, regex_ret, rx::cl_join)){
 				if(const char * reason = Config.GetBan(regex_ret[1].str().c_str())){
 					SendMsg("Sorry, ", regex_ret[1].str().data(), " aber du stehst auf meiner Abschussliste. (", reason, ")\n");
-					SendMsg(3, "/kick", regex_ret[1].str().data(), "\n");
+					SendMsg(3, "/kick ", regex_ret[1].str().data(), "\n");
 				}
 				else {				
 				SendMsg("Hi! Viel Spass beim Spielen, ", regex_ret[1].str().data(), ".\n", NULL);
 				SendMsg(2, "Mehr ueber diesen Server erfaehrst du unter cserv.game-host.org\nJeder kann bestimmen, was gehostet wird. Gib %hilf ein!\n", NULL);
 				}
 			} else if(regex_match(line, regex_ret, rx::cl_part)){
-				SendMsg("Boeh, ", regex_ret[1].str().data(), " ist ein Leaver.\n", NULL);
+				if(!Config.GetBan(regex_ret[1].str().data())) SendMsg("Boeh, ", regex_ret[1].str().data(), " ist ein Leaver.\n", NULL);
 				/*mysqlpp::Connection conn(false);
 				if (conn.connect(Login.db, Login.addr, Login.usr, Login.pw)) {
 					std::string querystring;

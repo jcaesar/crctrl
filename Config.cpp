@@ -43,11 +43,6 @@ void ConfigurationStore::Reload(){
 		if (mysqlpp::UseQueryResult res = query2.use()) {
 			int cnt = int(res.fetch_row()[0]);
 			while(res.fetch_row());
-			if(Scens != NULL) {
-				while(ScenCount >= 0) delete *(Scens + (ScenCount--));
-				delete [] Scens;
-				Scens = NULL;
-			}
 			mysqlpp::Query query3 = conn.query("SELECT Path, HostChance, LeagueChance, LobbyTime, ScenIndex FROM ScenarioList");
 			if(mysqlpp::UseQueryResult res = query3.use()){
 				Scens = new ScenarioSet * [cnt];
@@ -103,24 +98,26 @@ void ConfigurationStore::Reload(){
 			while(res.fetch_row());
 			mysqlpp::Query query6 = conn.query("SELECT Name, Reason FROM Bans"); 
 			if(mysqlpp::UseQueryResult bans = query6.use()){
-				Bans = new BanSet*[cnt];
+				Bans = new BanSet*[cnt]; //Deleted in Standard()
 				BanCount = cnt;
 				while(mysqlpp::Row row=bans.fetch_row()) {
 					cnt--;
 					if(cnt < 0) break;
-					int len = row[0].length()+1;
-					char * nameps = new char[len];
-					strncpy(nameps,row[0].c_str(),len);
+					int len = row[0].length()+5;
+					char * nameps = new char[len]; //Deleted here
+					strncpy(nameps+2,row[0].c_str(),len-4);
+					strncpy(nameps, ".*", 2); strcpy(nameps+len-3, ".*"); //FIXME These .* should not be nescessary
 					len = row[1].length()+1;
-					char * reason = new char[len];
+					char * reason = new char[len]; //Deleted in d'tor of BanSet
 					strncpy(reason,row[1].c_str(),len);
 					boost::regex * namepat;
-					try {*namepat = nameps;}
+					try {namepat = new boost::regex(nameps, boost::regex_constants::icase);} //Deleted in d'tor of BanSet
 					catch (boost::regex_error& e) {
 						std::cerr << "Ban error: " << nameps << " is not a valid regular expression: \"" << e.what() << "\"" << std::endl;
 						*namepat = "^$";
 					}
-					(*(Bans + cnt)) = new BanSet(namepat, reason);
+					delete [] nameps;
+					(*(Bans + cnt)) = new BanSet(namepat, reason); //Deleted in Standard()
 				}
 			} else {
 				std::cerr << "Error in retriving Bans: " << query6.error() << std::endl;

@@ -8,6 +8,7 @@ TARGET_LINK_LIBRARIES(crctrl pthread mysqlpp boost_regex-mt)
 
 ADD_SUBDIRECTORY( helpers )
 
+ADD_DEFINITIONS(-g)
 
 # mySQL++ stuff
 FIND_PATH(MYSQLPP_INCLUDE_PATH mysql++.h /usr/include/mysql++/)

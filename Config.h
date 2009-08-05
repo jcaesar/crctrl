@@ -91,6 +91,10 @@ struct BanSet {
 	BanSet(boost::regex * namepat, char * reason):
 		NamePattern (namepat), Reason (reason)
 	{}
+	~BanSet(){
+		delete NamePattern;
+		delete [] Reason;
+	}
 };
 
 static class ConfigurationStore{ //Just a silly name. I only need it for the Constructor and the func-declarations.
@@ -148,6 +152,24 @@ static class ConfigurationStore{ //Just a silly name. I only need it for the Con
 			strcpy(Path, "/usr/games");
 			delete [] ConfigPath;
 			ConfigPath = new char[1];
+			if(Bans){
+				Bans += BanCount;
+				while(BanCount--){
+					Bans--;
+					delete *Bans;
+				}
+				delete [] Bans;
+				Bans = NULL;
+			}
+			if(Scens) {
+				Scens += ScenCount;
+				while(ScenCount--){
+					Scens--;
+					delete *Scens;
+				}
+				delete [] Scens;
+				Scens = NULL;
+			}
 		}
 		void Reload();
 		const ScenarioSet * GetScen(int);

@@ -97,12 +97,12 @@ void SigPipeHandler(int signo){
 void CrashHandler(int signo){
 	std::cerr << "Exiting due to error. Signo #" << signo << ": ";
 	switch(signo){
-		case SIGBUS: std::cerr << "SIGBUS"; break;
-		case SIGILL: std::cerr << "SIGILL"; break;
+		case SIGBUS:  std::cerr << "SIGBUS";  break;
+		case SIGILL:  std::cerr << "SIGILL";  break;
 		case SIGSEGV: std::cerr << "SIGSEGV"; break;
 		case SIGABRT: std::cerr << "SIGABRT"; break;
 		case SIGQUIT: std::cerr << "SIGQUIT"; break;
-		case SIGFPE: std::cerr << "SIGFPE"; break;
+		case SIGFPE:  std::cerr << "SIGFPE";  break;
 		case SIGTERM: std::cerr << "SIGTERM"; break;
 	}
 	std::cerr << std::endl;
