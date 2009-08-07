@@ -1,5 +1,7 @@
 class AutoHost{
 	private:
+		const int ID;
+		char * OutPrefix;
 		pthread_t tid;
 		Game * CurrentGame;
 		static void * ThreadWrapper(void *);
@@ -13,16 +15,24 @@ class AutoHost{
 		~AutoHost();
 		Game * GetGame();
 		bool Enqueue(const ScenarioSet *);
+		int GetID(){return ID;}
+		const char * GetPrefix(){return OutPrefix;}
+		void SoftEnd(bool = true);
 };
 
 static class AutoHostList{
 	private:
 		std::vector <AutoHost *> Instances;
+		int Index;
 	public:
+		AutoHostList();
 		~AutoHostList();
-		void Add(AutoHost *);
+		int Add(AutoHost *);
 		bool Remove(AutoHost *);
+		void DelAll();
+		AutoHost * Get(int);
 		AutoHost * FindByGame(Game *);
+		AutoHost * Find(int);
+		bool GameExists(Game *);
+		bool Exists(AutoHost *);
 } AutoHosts;
-
-#include "AutoHost.cpp" //This is wierd! Strange! Absolutely! Why have I got to do this? FIXME!!1

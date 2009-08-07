@@ -22,6 +22,8 @@ namespace rx{
 	//Could not Start. Error: 
 	static boost::regex cl_join		("^\\[[0-9]{2}:[0-9]{2}:[0-9]{2}\\] Client (.*) aktiviert\\.$"); 
 	//[18:30:52] Client Tinys Pc aktiviert.
+	static boost::regex cl_conn		("^\\[[0-9]{2}:[0-9]{2}:[0-9]{2}\\] Client (.*) verbunden\\.$"); 
+	//[15:52:34] Client küenzu verbunden.
 	static boost::regex pl_join		("^\\[[0-9]{2}:[0-9]{2}:[0-9]{2}\\] Spielerbeitritt: (.*)$");
 	//
 	static boost::regex cl_part		("^\\[[0-9]{2}:[0-9]{2}:[0-9]{2}\\] Client (.*) entfernt \\(.*\\).$");
@@ -55,57 +57,5 @@ namespace rx{
 }
 
 #include "helpers/StringFunctions.cpp"
-
 #include "helpers/StringCollector.cpp"
-
 #include "helpers/StreamReader.cpp"
-
-class OutprintControl;
-static class OutprintControl{
-	private:
-		std::vector <int> fds;
-		pthread_mutex_t mutex;
-	public:
-		OutprintControl(){
-			pthread_mutex_init(&mutex, NULL);
-		}
-		~OutprintControl(){
-			pthread_mutex_destroy(&mutex);
-		}
-		void Add(int fd){
-			pthread_mutex_lock(&mutex);
-			fds.push_back(fd);
-			pthread_mutex_unlock(&mutex);
-		}
-		bool Remove(int fd){
-			pthread_mutex_lock(&mutex);
-			int i=fds.size();
-			while(i--){
-				if(fds[i]==fd) {
-					fds.erase(fds.begin()+i); 
-					pthread_mutex_unlock(&mutex); 
-					return true;
-				}
-			}
-			pthread_mutex_unlock(&mutex);
-			return false;
-		}
-		void Put(const char * first, ...){
-			va_list vl;
-			va_start(vl, first);
-			StringCollector msg(first);
-			const char * str;
-			while(str = va_arg(vl, const char *))
-				msg.Push(str);
-			bool endlbr = true;
-			if(*(msg.GetBlock() + msg.GetLength() - 1) == '\n') endlbr = false;
-			pthread_mutex_lock(&mutex);
-			int cnt=fds.size();
-			for(int i = 0; i<cnt; i++){
-				write(fds[i], msg.GetBlock(), msg.GetLength());
-				if(endlbr) write(fds[i], "\n", 1);
-			}
-			pthread_mutex_unlock(&mutex);
-			va_end(vl);
-		}
-} Out;

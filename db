@@ -1,7 +1,17 @@
 SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
 
 
-CREATE TABLE `ScenarioList` (
+CREATE TABLE IF NOT EXISTS `Bans` (
+  `Name` tinytext NOT NULL,
+  `Adress` tinytext NOT NULL,
+  `Reason` tinytext NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+INSERT INTO `Bans` (`Name`, `Adress`, `Reason`) VALUES
+('bantest', 'NOT IMPLEMENTED', 'Bantest: Scheint zu gehen, oder?');
+
+
+CREATE TABLE IF NOT EXISTS `ScenarioList` (
   `ScenIndex` int(10) unsigned NOT NULL auto_increment,
   `Path` tinytext NOT NULL,
   `HTMLName` tinytext NOT NULL,
@@ -9,7 +19,7 @@ CREATE TABLE `ScenarioList` (
   `LeagueChance` float NOT NULL,
   `LobbyTime` smallint(6) NOT NULL,
   PRIMARY KEY  (`ScenIndex`)
-) ENGINE=MyISAM  DEFAULT CHARSET=utf8 AUTO_INCREMENT=37 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8 AUTO_INCREMENT=39 ;
 
 INSERT INTO `ScenarioList` (`ScenIndex`, `Path`, `HTMLName`, `HostChance`, `LeagueChance`, `LobbyTime`) VALUES
 (1, 'Worlds.c4f/Watercaves.c4s', 'Wasserh&ouml;hlen', 0, 0, 210),
@@ -45,10 +55,12 @@ INSERT INTO `ScenarioList` (`ScenIndex`, `Path`, `HTMLName`, `HostChance`, `Leag
 (33, 'EkeReloaded.c4f/AirbikeFight.c4s', 'Airbike Fight', 0, 0, 180),
 (34, 'EkeReloaded.c4f/MeltMe.c4s', 'MeltMe', 0.5, 0.3, 180),
 (35, 'Western.c4f/CaptureTheFlag.c4s', 'Flaggen der Ehre', 0.1, 0, 240),
-(36, 'Knights.c4f/CoFuT.c4s', 'CoFuT', 0.1, 0, 600);
+(36, 'Knights.c4f/CoFuT.c4s', 'CoFuT', 0.1, 0, 600),
+(37, 'WarStar2.c4f/3_Obit.c4s', 'Obit', 0.9, 0.2, 190),
+(38, 'MEtagenkampfv1.c4s', 'Etagenkampf', 0.01, 0.5, 180);
 
 
-CREATE TABLE `ScenarioNames` (
+CREATE TABLE IF NOT EXISTS `ScenarioNames` (
   `ScenIndex` int(10) unsigned NOT NULL,
   `Name` tinytext NOT NULL,
   KEY `ScenIndex` (`ScenIndex`)
@@ -125,10 +137,12 @@ INSERT INTO `ScenarioNames` (`ScenIndex`, `Name`) VALUES
 (35, 'CTF'),
 (36, 'CoFuT'),
 (36, 'oFuT'),
-(36, 'Ohne Furcht und Tadel');
+(36, 'Ohne Furcht und Tadel'),
+(37, 'Obit'),
+(38, 'Etagenkampf');
 
 
-CREATE TABLE `Settings` (
+CREATE TABLE IF NOT EXISTS `Settings` (
   `Identifier` tinytext character set ascii NOT NULL,
   `Value` tinytext character set ascii NOT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=ascii COLLATE=ascii_bin;

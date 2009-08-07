@@ -5,7 +5,7 @@ StreamControl::StreamControl(int fdin, int fdout):
 	fd_out(fdout),
 	sr(new StreamReader(fdin))
 {
-	Out.Add(fdout);
+	Out.Add(this);
 	pthread_create(&tid, NULL, &StreamControl::ThreadWrapper, this);
 	sel=NULL;
 }
@@ -13,68 +13,107 @@ StreamControl::StreamControl(int fdin, int fdout):
 void StreamControl::Work(){
 	std::string cmd;
 	while(sr->ReadLine(&cmd)){
-		if(startswith(&cmd,"%start")){
-			sel=new Game;
-			int pos;
-			{ //Gonna get the Scen name from the end.
-				bool inv_comma=false;
-				const char *p; const char *a; a=cmd.data(); p=a+cmd.length();
-				while(p>a){
-					p--;
-					if(*p=='"'){
-						inv_comma = !inv_comma;
-					}
-					if(*p==' ' and !inv_comma){
-						sel->SetScen(p+1);
-						break;
-					}
-				}
-			}
-			if((pos=cmd.find(" time:"))!=-1){
-				sel->SetLobbyTime(atoi(cmd.data()+pos+6));
-			}
-			if((pos=cmd.find(" ports:"))!=-1){
-				char * end;
-				int tcp=strtol(cmd.data()+pos+7, &end, 10);
-				sel->SetPorts(tcp,atoi(end+1));
-			}
-			if((cmd.find(" league "))!=-1){ sel->SetLeague(true);}
-			else if((cmd.find(" noleague "))!=-1){ sel->SetLeague(false);	}
-			if((cmd.find(" nosignup "))!=-1){
-				sel->SetSignOn(false);
-			}
-			sel->KillOnEnd();
-			sel->Start();
-		} else if(!cmd.compare("%auto")) {
+		if(!cmd.compare("%auto")) {
 			new AutoHost();
 		} else if(!cmd.compare("%end")) {
-			Games.DelAll();
+			AutoHosts.DelAll();
 			raise(SIGINT);
-		} else if(startswith(&cmd,"%kill")) {
-			if(Games.Exists(sel)){
-				if(cmd.compare("%kill forced")) sel->Exit(false, false);
-				else sel->Exit();
+		} else if(startswith(&cmd,"%stop")) {
+			if(AutoHosts.Exists(sel) && sel->GetGame()){
+				if(cmd.compare("%stop forced")) delete sel;
+				else sel->SoftEnd(false);
+			} else {
+				Out.Put(this, "No Host selected.", NULL);
 			}
 		} else if(!cmd.compare("%reload")) {
 			Config.Reload();
 		} else if(startswith(&cmd,"%sel ")) {
-			sel = Games.Find(cmd.data() + 5);
-			if(sel == NULL) Out.Put("No such game: ", cmd.data() + 5, NULL);
+			sel = AutoHosts.Find(atoi(cmd.data() + 5));
+			if(sel == NULL) Out.Put(this, "No such host: ", cmd.data() + 5, NULL);
+			else PrintStatus(sel);
+		} else if(!cmd.compare("%status")) {
+			PrintStatus();
 		} else if(startswith(&cmd,"%")){
-			Out.Put("No such command: ", cmd.data(), NULL);
+			Out.Put(this, "No such command: ", cmd.data(), NULL);
 		} else {
-			if(Games.Exists(sel)) {
+			if(AutoHosts.Exists(sel) && sel->GetGame()) {
 				cmd += "\n";
-				sel->SendMsg(cmd.c_str(), NULL);
+				sel->GetGame()->SendMsg(cmd.c_str(), NULL);
 			}
 		}
 	} //sr is invalid after that.
+	sr = NULL;
 	delete this;
+}
+
+void StreamControl::PrintStatus(AutoHost * stat /*= NULL*/){
+	if(AutoHosts.Exists(stat)) Out.Put(this, stat->GetPrefix(), " ", stat->GetGame()->GetScen());
+	else{
+		int i=0;
+		while(AutoHost * ah = AutoHosts.Get(i)) PrintStatus(ah);
+	}
+}
+
+bool StreamControl::Write(void * context, const char * msg){
+	if(context == sel || context == this || context == 0){
+		int len=strlen(msg);
+		if(len != write(fd_out, msg, len)) return false;
+		if(msg[--len] != '\n') if(write(fd_out, "\n", 1) != 1) return false;
+		return true;
+	} else return false;
 }
 
 void * StreamControl::ThreadWrapper(void *p) { //I wonder why I don't need a static here. (but in the .h) Or better: I MAY NOT use it...
 	static_cast<StreamControl*>(p)->Work(); 
 	return NULL;
+}
+
+
+
+OutprintControl::OutprintControl(){
+	pthread_mutex_init(&mutex, NULL);
+}
+
+OutprintControl::~OutprintControl(){
+	pthread_mutex_destroy(&mutex);
+}
+
+void OutprintControl::Add(StreamControl * ctrl){
+	pthread_mutex_lock(&mutex);
+	ctrls.push_back(ctrl);
+	pthread_mutex_unlock(&mutex);
+}
+
+bool OutprintControl::Remove(StreamControl * ctrl){
+	pthread_mutex_lock(&mutex);
+	int i=ctrls.size();
+	while(i--){
+		if(ctrls[i]==ctrl) {
+			ctrls.erase(ctrls.begin()+i); 
+			pthread_mutex_unlock(&mutex); 
+			return true;
+		}
+	}
+	pthread_mutex_unlock(&mutex);
+	return false;
+}
+
+void OutprintControl::Put(void * context, const char * first, ...){
+	va_list vl;
+	va_start(vl, first);
+	StringCollector msg(first);
+	const char * str;
+	while(str = va_arg(vl, const char *))
+		msg.Push(str);
+	bool endlbr = true;
+	if(*(msg.GetBlock() + msg.GetLength() - 1) == '\n') endlbr = false;
+	pthread_mutex_lock(&mutex);
+	int cnt=ctrls.size();
+	for(int i = 0; i<cnt; i++){
+		ctrls[i]->Write(context, msg.GetBlock());
+	}
+	pthread_mutex_unlock(&mutex);
+	va_end(vl);
 }
 
 #endif

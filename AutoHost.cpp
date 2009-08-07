@@ -1,25 +1,32 @@
 #ifndef AutoHostCpp
 #define AutoHostCpp
 
-AutoHost::AutoHost() : work(true), Fails(0) {
-	AutoHosts.Add(this);
+AutoHost::AutoHost() : work(true), Fails(0), ID(AutoHosts.Add(this)) {
+	OutPrefix = new char[11];
+	sprintf(OutPrefix, "a#%d", ID);
 	pthread_mutex_init(&mutex, NULL);
 	pthread_create(&tid, NULL, &AutoHost::ThreadWrapper, this);
 }
 
+void AutoHost::SoftEnd(bool wait /*= true*/){
+	work = false;
+	if(wait && pthread_self() != tid) pthread_join(tid, NULL);
+}
+
 AutoHost::~AutoHost(){
 	work = false;
-	delete CurrentGame; //This is crazy. It calls the destructor, which makes CR halt, and waits for the thread wich is waiting for CR to end...
-		//But I think it will crash.
+	delete CurrentGame;
 	CurrentGame = NULL;
-	pthread_join(tid, NULL); //And my own thread will end when all that is done.
+	if(pthread_self() != tid) pthread_join(tid, NULL); //And my own thread will end when all that is done. 
 	pthread_mutex_destroy(&mutex);
 	AutoHosts.Remove(this);
+	delete OutPrefix;
 }
 
 void AutoHost::Work(){
+	Out.Put(NULL, OutPrefix, " New AutoHost working!", NULL);
 	while(work){
-		CurrentGame = new Game();
+		CurrentGame = new Game(this);
 		pthread_mutex_lock(&mutex);
 		if(ScenQueue.empty()) CurrentGame -> SetScen(Config.GetScen());
 		else {
@@ -31,14 +38,15 @@ void AutoHost::Work(){
 			ScenQueue.erase(ScenQueue.begin());
 		}
 		pthread_mutex_unlock(&mutex);
-		CurrentGame -> Start();
-		CurrentGame -> AwaitEnd();
+		CurrentGame -> Start(); //This blocks, until the game is over.
+		if(!work) break;
 		if(CurrentGame -> GetStatus() == Failed) {
 			Fails++;
 			if(Fails >= Config.MaxExecTrials) delete this;
 		} else Fails = 0;
 		delete CurrentGame;
 	}
+	Out.Put(NULL, OutPrefix, " Terminated.", NULL);
 }
 
 Game * AutoHost::GetGame(){
@@ -61,15 +69,23 @@ void * AutoHost::ThreadWrapper(void * p){
 	return NULL;
 }
 
+AutoHostList::AutoHostList(){
+	Index = 0;
+}
 
 AutoHostList::~AutoHostList(){
+	DelAll();
+}
+
+void AutoHostList::DelAll(){
 	int i = Instances.size();
 	while(i--) delete Instances[i];
 	Instances.clear();
 }
 
-void AutoHostList::Add(AutoHost * add){
+int AutoHostList::Add(AutoHost * add){
 	Instances.push_back(add);
+	return ++Index;
 }
 
 bool AutoHostList::Remove(AutoHost * rem){
@@ -88,4 +104,33 @@ AutoHost * AutoHostList::FindByGame(Game * find){
 	return NULL;
 }
 
+AutoHost * AutoHostList::Find(int findid){
+	int i=Instances.size();
+	while(i--){
+		if(Instances[i]->GetID()==findid) return Instances[i];
+	}
+	return NULL;
+}
+
+bool AutoHostList::GameExists(Game * find){
+	int i=Instances.size();
+	while(i--){
+		if(Instances[i]->GetGame()==find) return true;
+	}
+	return false;
+}
+
+bool AutoHostList::Exists(AutoHost * find){
+	int i=Instances.size();
+	while(i--){
+		if(Instances[i]==find) return true;
+	}
+	return false;
+}
+
+
+AutoHost * AutoHostList::Get(int i){
+	try {return Instances.at(i);} //Vector sux, dunno why.
+	catch (...) {return NULL;}
+}
 #endif

@@ -8,15 +8,13 @@
 	#define DEFAULT_SQL_DB "crctrl"
 #endif
 
-#include "Lib.cpp"
+#include "Lib.hpp"
 //#include "Umlaut.hpp"
 #include "Config.h"
-#include "Config.cpp"
 #include "GameControl.h"
-#include "AutoHost.h"
-#include "GameControl.cpp"
 #include "Control.h"
-#include "Control.cpp"
+#include "AutoHost.h"
+
 
 void CrashHandler(int);
 void EndHandler(int);
@@ -35,13 +33,13 @@ int main(int argc, char* *argv)
 	signal(SIGPIPE, SigPipeHandler);
 
 	if(argc-- > 0) argv++;
-	bool create_autohost = false; char * db = NULL, * usr = NULL, * pw = NULL, * addr = NULL;
+	int create_autohost = 0; char * db = NULL, * usr = NULL, * pw = NULL, * addr = NULL;
 	while(argc--){
 		if(!strncmp(*argv, "db:", 3)) db=*argv+3;
 		else if(!strncmp(*argv, "usr:", 4)) usr=*argv+4;
 		else if(!strncmp(*argv, "pw:", 3)) pw=*argv+3;
 		else if(!strncmp(*argv, "addr:", 5)) addr=*argv+5;
-		else if(!strcmp(*argv, "auto")) create_autohost = true;
+		else if(!strcmp(*argv, "auto")) create_autohost++;
 		else {
 			std::cerr << printf("Usage: %s %s %s %s %s", *argv, "db:<mysql-database>", "usr:<mysql-user>", "pw:<mysql-password>", "[auto]") << std::endl;
 			std::cerr << printf("Example: %s db:clonk_cserv_database usr:cserv pw:cservs_password auto", *argv);
@@ -51,7 +49,7 @@ int main(int argc, char* *argv)
 	}
 	Config.SetLoginData(usr,pw,db,addr);
 	Config.Reload();
-	if(create_autohost) new AutoHost();
+	while(create_autohost--) new AutoHost();
 	new StreamControl(STDIN_FILENO,STDOUT_FILENO);
 	
 	int       list_s;                /*  listening socket          */
@@ -86,12 +84,12 @@ int main(int argc, char* *argv)
 
 void EndHandler(int signo){
 	//delete &Games; What for?
-	Out.Put("Exiting.", NULL);
+	Out.Put(NULL, "Exiting.", NULL);
 	exit(0);
 }
 
 void SigPipeHandler(int signo){
-	Out.Put("Got SIGPIPE... What now? :(", NULL);
+	Out.Put(NULL, "Got SIGPIPE... What now? :(", NULL);
 }
 
 void CrashHandler(int signo){

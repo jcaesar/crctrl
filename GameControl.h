@@ -1,38 +1,13 @@
 enum GameStatus {Setting, PreLobby, Lobby, Load, Run, End, Failed};
 struct TimedMsg{time_t Stamp; char * Msg; ~TimedMsg(){if(Msg != NULL) delete Msg;}};
 
-class Game;
-
-static class GameRegister{
-	private:
-		std::vector <Game *> Register;
-		int Count;
-		int Index;
-		pthread_mutex_t mutex;
-	public:
-		int Add(Game *);
-		bool Delete(Game *);
-		void DelAll();
-		Game * Find(const char *);
-		bool Exists(Game *);
-		GameRegister() :
-			Count(0),
-			Index(0)
-		{
-			pthread_mutex_init(&mutex, NULL);
-		}
-		~GameRegister(){ //This class gets desinitialized, what doesn't happen to non-static classes. Gotta use this °_o
-			DelAll();
-			pthread_mutex_destroy(&mutex);
-		}
-} Games;
+class AutoHost;
 
 class Game
 {
 	private:
 		int pipe_out, pipe_err; //from current process view. 
 		StreamReader *sr;
-		pthread_t tid;
 		pid_t pid;
 		std::vector <TimedMsg *> MsgQueue;
 		struct{
@@ -47,8 +22,7 @@ class Game
 			char * Scen;
 			char * PW;
 		} Settings;
-		bool Selfkill; //Maybe transfer to struct Status, when it's implemented
-		char * OutPrefix;
+		const char * OutPrefix;
 		GameStatus Status;
 		int ExecTrials;
 		pthread_t msgtid;
@@ -59,19 +33,16 @@ class Game
 		int Start(const char *);
 		bool Fail();
 		void Control();
-		static void * ControlThreadWrapper(void *);
 		void MsgTimer();
 		static void * MsgThreadWrapper(void *);
+		AutoHost * Parent;
 	public:
-		Game(const char* args){ //Deprecated!
-			Start(args);
-		}
-		Game();
+		Game(AutoHost *);
 		void Start();
 		bool SendMsg(const char *, ...);
 		void SendMsg(int, const char *, ...);
 		bool SendMsg(const std::string);
-		void Exit(bool, bool);
+		void Exit(bool);
 		void AwaitEnd();
 		~Game();
 		GameStatus GetStatus(){return Status;}
@@ -81,7 +52,7 @@ class Game
 		bool SetLeague(bool league){if(Status==Setting){Settings.League=league; return true;} return false;}
 		bool SetPorts(int tcp, int udp){if(Status==Setting){Settings.Ports.TCP=tcp; Settings.Ports.UDP=udp; return true;} return false;}
 		bool SetLobbyTime(int secs){if(Status==Setting){Settings.LobbyTime=secs; return true;} return false;}
-		char * GetName() const{return OutPrefix;}
-		void KillOnEnd(bool yes=true) {Selfkill=yes;}
+		const char * GetPrefix() const{return OutPrefix;}
+		const char * GetScen() const {return Settings.Scen;}
 		GameStatus GetStatus() const {return Status;}
 };
