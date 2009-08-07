@@ -2,13 +2,26 @@ cmake_minimum_required(VERSION 2.6)
 
 PROJECT( crctrl )
 
-ADD_EXECUTABLE(crctrl Main)
+SET ( crctrl_source 
+	main.cpp
+	Lib.cpp
+	GameControl.cpp
+	Control.cpp
+	Config.cpp
+	AutoHost.cpp
+)
+		
+
+ADD_EXECUTABLE(crctrl ${crctrl_source})
 
 TARGET_LINK_LIBRARIES(crctrl pthread mysqlpp boost_regex-mt)
 
 ADD_SUBDIRECTORY( helpers )
 
 ADD_DEFINITIONS(-g)
+
+#boost
+FIND_PACKAGE(boost Required)
 
 # mySQL++ stuff
 FIND_PATH(MYSQLPP_INCLUDE_PATH mysql++.h /usr/include/mysql++/)
