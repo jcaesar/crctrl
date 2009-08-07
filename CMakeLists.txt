@@ -21,7 +21,7 @@ ADD_SUBDIRECTORY( helpers )
 ADD_DEFINITIONS(-g)
 
 #boost
-FIND_PACKAGE(boost REQUIRED)
+FIND_PACKAGE( Boost REQUIRED )
 
 # mySQL++ stuff
 FIND_PATH(MYSQLPP_INCLUDE_PATH mysql++.h /usr/include/mysql++/)
