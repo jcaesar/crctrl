@@ -1,3 +1,4 @@
+/*
 #include <iostream>
 #include <string>
 #include <vector>
@@ -14,8 +15,9 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+*/
 #include <boost/regex.hpp>
-#include <mysql++.h>
+//#include <mysql++.h>
 
 namespace rx{
 	static boost::regex ctrl_err	("^Could not Start\\. Error: ");

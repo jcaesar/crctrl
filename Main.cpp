@@ -1,3 +1,5 @@
+#include <signal.h>
+
 #ifndef DEFAULT_SQL_NAME
 	#define DEFAULT_SQL_NAME "crctrl"
 #endif

@@ -1,5 +1,4 @@
-#ifndef GameControlCpp
-#define GameControlCpp
+#include "GameControl.h"
 
 Game::Game(AutoHost * parent) : //FIXME: Better use reference
 	Parent(parent),
@@ -392,4 +391,3 @@ void Game::MsgTimer(){
 	pthread_mutex_unlock(&msgmutex);
 }
 
-#endif

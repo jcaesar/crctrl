@@ -1,5 +1,5 @@
-#ifndef AutoHostCpp
-#define AutoHostCpp
+
+#include "Autohost.h"
 
 AutoHost::AutoHost() : work(true), Fails(0), ID(AutoHosts.Add(this)) {
 	OutPrefix = new char[11];

@@ -1,5 +1,6 @@
-#ifndef ConfigCpp
-#define ConfigCpp
+
+#include "Config.h"
+
 void ConfigurationStore::SetLoginData(const char * usr, const char * pw, const char * db, const char * addr){
 	if(usr != NULL) Login.usr = usr;
 	if(pw != NULL) Login.pw = pw;
@@ -175,5 +176,3 @@ const char * ConfigurationStore::GetBan(const char * name){
 	}
 	return NULL;
 }
-
-#endif

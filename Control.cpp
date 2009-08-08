@@ -1,5 +1,5 @@
-#ifndef ControlCpp
-#define ControlCpp
+
+#include "Control.h"
 
 StreamControl::StreamControl(int fdin, int fdout):
 	fd_out(fdout),
@@ -115,5 +115,3 @@ void OutprintControl::Put(void * context, const char * first, ...){
 	pthread_mutex_unlock(&mutex);
 	va_end(vl);
 }
-
-#endif
