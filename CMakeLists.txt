@@ -8,6 +8,7 @@ SET ( crctrl_source
 	Control.cpp
 	AutoHost.cpp
 	Main.cpp
+	helpers/StringFunctions.cpp
 )
 		
 

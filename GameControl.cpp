@@ -34,8 +34,8 @@ bool Game::SetScen(const char * scen){
 	return false;
 }
 
-bool Game::SetScen(const ScenarioSet * scen, bool changeleague){
-	if(Status==Setting){
+bool Game::SetScen(const ScenarioSet * scen, bool changeleague /*==true*/){
+	if(Status==Setting && scen != 0){
 		delete [] Settings.Scen;
 		Settings.Scen = new char[strlen(scen->GetPath())+1];
 		strcpy(Settings.Scen,scen->GetPath());
