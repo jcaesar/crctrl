@@ -1,3 +1,11 @@
+class AutoHost;
+#ifndef AutoHostH
+#define AutoHostH
+
+#include "GameControl.h"
+#include "Config.h"
+#include <pthread.h>
+
 class AutoHost{
 	private:
 		const int ID;
@@ -36,3 +44,5 @@ static class AutoHostList{
 		bool GameExists(Game *);
 		bool Exists(AutoHost *);
 } AutoHosts;
+
+#endif

@@ -1,3 +1,6 @@
+#ifndef StreamReaderHpp
+#define StreamReaderHpp
+
 #ifndef MAXCHARS
 	#define MAXCHARS 128
 #endif
@@ -44,3 +47,5 @@ class StreamReader{
 			return true;
 		}
 };
+
+#endif

@@ -1,7 +1,22 @@
+class Game;
+#ifndef GameControlH
+#define GameControlH
+
+#include <boost/regex.hpp>
+#include <signal.h>
+#include <pthread.h>
+#include "Lib.hpp"
+#include <stdarg.h>
+#include "helpers/StringCollector.hpp"
+#include "Config.h"
+#include "helpers/StreamReader.hpp"
+#include "Control.h"
+#include "AutoHost.h"
+#include <sys/wait.h>
+#include <errno.h>
+
 enum GameStatus {Setting, PreLobby, Lobby, Load, Run, End, Failed};
 struct TimedMsg{time_t Stamp; char * Msg; ~TimedMsg(){if(Msg != NULL) delete Msg;}};
-
-class AutoHost;
 
 class Game
 {
@@ -56,3 +71,5 @@ class Game
 		const char * GetScen() const {return Settings.Scen;}
 		GameStatus GetStatus() const {return Status;}
 };
+
+#endif

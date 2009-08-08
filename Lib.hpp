@@ -57,7 +57,3 @@ namespace rx{
 	static boost::regex cm_start	("^\\[[0-9]{2}:[0-9]{2}:[0-9]{2}\\] <(.*)> %start (.*)$");
 	//[16:58:32] <CServ> %start sty*/
 }
-
-#include "helpers/StringFunctions.cpp"
-#include "helpers/StringCollector.cpp"
-#include "helpers/StreamReader.cpp"

@@ -1,3 +1,10 @@
+#ifndef ControlH
+#define ControlH
+
+#include "AutoHost.h"
+#include "Config.h"
+#include <pthread.h>
+
 class StreamControl{
 	private:
 		void Work();
@@ -23,3 +30,5 @@ static class OutprintControl{
 		bool Remove(StreamControl * ctrl);
 		void Put(void *, const char *, ...);
 } Out;
+
+#endif

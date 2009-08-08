@@ -3,11 +3,11 @@ cmake_minimum_required(VERSION 2.6)
 PROJECT( crctrl )
 
 SET ( crctrl_source 
-	Main.cpp
+	Config.cpp
 	GameControl.cpp
 	Control.cpp
-	Config.cpp
 	AutoHost.cpp
+	Main.cpp
 )
 		
 

@@ -1,3 +1,23 @@
+#ifndef ConfigH
+#define ConfigH
+
+#ifndef DEFAULT_SQL_NAME
+	#define DEFAULT_SQL_NAME "crctrl"
+#endif
+#ifndef DEFAULT_SQL_PW
+	#define DEFAULT_SQL_PW "sLZpTCMMHZmnvebA"
+#endif
+#ifndef DEFAULT_SQL_DB
+	#define DEFAULT_SQL_DB "crctrl"
+#endif
+
+#include <boost/regex.hpp>
+#include <mysql++.h>
+#include <string>
+#include <signal.h>
+#include "helpers/StringFunctions.hpp"
+#include <math.h>
+
 class ScenarioSet;
 class ScenarioSet {
 	private:
@@ -178,3 +198,5 @@ static class ConfigurationStore{ //Just a silly name. I only need it for the Con
 		void SetLoginData(const char *, const char *, const char *, const char *);
 		const char * GetBan(const char *);
 } Config;
+
+#endif

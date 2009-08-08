@@ -1,5 +1,5 @@
 
-#include "Autohost.h"
+#include "AutoHost.h"
 
 AutoHost::AutoHost() : work(true), Fails(0), ID(AutoHosts.Add(this)) {
 	OutPrefix = new char[11];
@@ -133,4 +133,3 @@ AutoHost * AutoHostList::Get(int i){
 	try {return Instances.at(i);} //Vector sux, dunno why.
 	catch (...) {return NULL;}
 }
-#endif

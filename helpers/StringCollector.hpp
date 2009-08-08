@@ -1,3 +1,6 @@
+#ifndef StringCollectorHpp
+#define StringCollectorHpp
+
 class StringCollector{
 	private:
 		const char * data;
@@ -59,3 +62,5 @@ class StringCollector{
 		StringCollector& operator+=(const char * push){Push(push); return *this;}
 		StringCollector& operator+=(const int push)   {Push(push); return *this;}
 };
+
+#endif
