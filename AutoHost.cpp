@@ -1,6 +1,12 @@
 
 #include "AutoHost.h"
 
+static AutoHostList AutoHosts;
+
+AutoHostList * GetAutoHosts(){
+	return &AutoHosts;
+}
+
 AutoHost::AutoHost() : work(true), Fails(0), ID(AutoHosts.Add(this)) {
 	OutPrefix = new char[11];
 	sprintf(OutPrefix, "a#%d", ID);
@@ -24,7 +30,7 @@ AutoHost::~AutoHost(){
 }
 
 void AutoHost::Work(){
-	Out.Put(NULL, OutPrefix, " New AutoHost working!", NULL);
+	GetOut()->Put(NULL, OutPrefix, " New AutoHost working!", NULL);
 	while(work){
 		CurrentGame = new Game(this);
 		pthread_mutex_lock(&mutex);
@@ -46,7 +52,7 @@ void AutoHost::Work(){
 		} else Fails = 0;
 		delete CurrentGame;
 	}
-	Out.Put(NULL, OutPrefix, " Terminated.", NULL);
+	GetOut()->Put(NULL, OutPrefix, " Terminated.", NULL);
 }
 
 Game * AutoHost::GetGame(){

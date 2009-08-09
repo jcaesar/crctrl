@@ -19,7 +19,7 @@ class StreamControl{
 		bool Write(void *, const char *);
 };
 
-static class OutprintControl{
+class OutprintControl{
 	private:
 		std::vector <StreamControl *> ctrls;
 		pthread_mutex_t mutex;
@@ -29,6 +29,8 @@ static class OutprintControl{
 		void Add(StreamControl * ctrl);
 		bool Remove(StreamControl * ctrl);
 		void Put(void *, const char *, ...);
-} Out;
+};
+
+OutprintControl * GetOut();
 
 #endif

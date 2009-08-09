@@ -76,12 +76,12 @@ int main(int argc, char* *argv)
 
 void EndHandler(int signo){
 	//delete &Games; What for?
-	Out.Put(NULL, "Exiting.", NULL);
+	GetOut()->Put(NULL, "Exiting.", NULL);
 	exit(0);
 }
 
 void SigPipeHandler(int signo){
-	Out.Put(NULL, "Got SIGPIPE... What now? :(", NULL);
+	GetOut()->Put(NULL, "Got SIGPIPE... What now? :(", NULL);
 }
 
 void CrashHandler(int signo){

@@ -124,7 +124,7 @@ int Game::Start(const char * args){
 			char * fullpath = new char[strlen(GetConfig()->Path) + 7];
 			strcpy(fullpath, GetConfig()->Path);
 			strcpy(fullpath+strlen(GetConfig()->Path), "/clonk");
-			execl(fullpath, GetConfig()->Path, args, NULL); //Think about replacing this by another function. Perhaps you need to get to that exit(child) down there...
+			execl(fullpath, GetConfig()->Path, args, NULL);
 			//When execl does fine, it will never return.
 			std::cerr << "Could not Start. Error: " << errno << std::endl; //Give parent process a notice.
 			close(fd1[0]);
@@ -151,7 +151,7 @@ void Game::Control(){
 	std::string line;
 	boost::smatch regex_ret;
 	while(sr->ReadLine(&line)){
-		Out.Put(Parent, OutPrefix, " ", line.c_str(), NULL); //This is not real logic, but I don't care for now... Perhaps the NULL terminates the list and the c_str.
+		GetOut()->Put(Parent, OutPrefix, " ", line.c_str(), NULL);
 		//Scan for events
 		if(regex_match(line, regex_ret, rx::cm_base)){
 			if(!regex_ret[2].compare("hilf") || !regex_ret[2].compare("help")) {
@@ -280,7 +280,7 @@ void Game::Control(){
 	}
 	if(Status==PreLobby) Fail(); return;
 	sr = NULL;
-	Out.Put(Parent, OutPrefix, " Clonk Rage terminated.", NULL);
+	GetOut()->Put(Parent, OutPrefix, " Clonk Rage terminated.", NULL);
 }
 
 void Game::Exit(bool soft = true){
@@ -309,7 +309,7 @@ Game::~Game(){
 bool Game::Fail(){
 	ExecTrials++;
 	if(ExecTrials >= GetConfig()->MaxExecTrials) {
-		Out.Put(Parent, OutPrefix, " Maximum execution attempts exceeded.", NULL);
+		GetOut()->Put(Parent, OutPrefix, " Maximum execution attempts exceeded.", NULL);
 		Status = Failed;
 		return true;
 	} else {
@@ -331,7 +331,7 @@ bool Game::SendMsg(const char * first, ...){
 	msg.GetBlock();
 	va_end(vl);
 	if(*(msg.GetBlock())=='/') //Some commands don't have feedback. Just do a notification.
-		Out.Put(Parent, OutPrefix, " ", msg.GetBlock(), NULL);
+		GetOut()->Put(Parent, OutPrefix, " ", msg.GetBlock(), NULL);
 	return (write(pipe_out, msg.GetBlock(), msg.GetLength())==msg.GetLength());
 }
 

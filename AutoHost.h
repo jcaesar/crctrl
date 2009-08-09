@@ -28,7 +28,7 @@ class AutoHost{
 		void SoftEnd(bool = true);
 };
 
-static class AutoHostList{
+class AutoHostList{
 	private:
 		std::vector <AutoHost *> Instances;
 		int Index;
@@ -43,6 +43,8 @@ static class AutoHostList{
 		AutoHost * Find(int);
 		bool GameExists(Game *);
 		bool Exists(AutoHost *);
-} AutoHosts;
+};
+
+AutoHostList * GetAutoHosts();
 
 #endif

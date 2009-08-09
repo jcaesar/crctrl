@@ -1,6 +1,12 @@
 
 #include "Control.h"
 
+OutprintControl Out;
+
+OutprintControl * GetOut(){
+	return &Out;
+}
+
 StreamControl::StreamControl(int fdin, int fdout):
 	fd_out(fdout),
 	sr(new StreamReader(fdin))
@@ -8,6 +14,8 @@ StreamControl::StreamControl(int fdin, int fdout):
 	Out.Add(this);
 	pthread_create(&tid, NULL, &StreamControl::ThreadWrapper, this);
 	sel=NULL;
+	if(fdin == STDIN_FILENO && fdout == STDOUT_FILENO) sleep(1); //Hacky, but the AutoHosts will have a status then.
+	PrintStatus();
 }
 
 void StreamControl::Work(){
@@ -16,10 +24,10 @@ void StreamControl::Work(){
 		if(!cmd.compare("%auto")) {
 			new AutoHost();
 		} else if(!cmd.compare("%end")) {
-			AutoHosts.DelAll();
+			GetAutoHosts()->DelAll();
 			raise(SIGINT);
 		} else if(startswith(&cmd,"%stop")) {
-			if(AutoHosts.Exists(sel) && sel->GetGame()){
+			if(GetAutoHosts()->Exists(sel) && sel->GetGame()){
 				if(cmd.compare("%stop forced")) delete sel;
 				else sel->SoftEnd(false);
 			} else {
@@ -28,7 +36,7 @@ void StreamControl::Work(){
 		} else if(!cmd.compare("%reload")) {
 			GetConfig()->Reload();
 		} else if(startswith(&cmd,"%sel ")) {
-			sel = AutoHosts.Find(atoi(cmd.data() + 5));
+			sel = GetAutoHosts()->Find(atoi(cmd.data() + 5));
 			if(sel == NULL) Out.Put(this, "No such host: ", cmd.data() + 5, NULL);
 			else PrintStatus(sel);
 		} else if(!cmd.compare("%status")) {
@@ -36,7 +44,7 @@ void StreamControl::Work(){
 		} else if(startswith(&cmd,"%")){
 			Out.Put(this, "No such command: ", cmd.data(), NULL);
 		} else {
-			if(AutoHosts.Exists(sel) && sel->GetGame()) {
+			if(GetAutoHosts()->Exists(sel) && sel->GetGame()) {
 				cmd += "\n";
 				sel->GetGame()->SendMsg(cmd.c_str(), NULL);
 			}
@@ -47,10 +55,10 @@ void StreamControl::Work(){
 }
 
 void StreamControl::PrintStatus(AutoHost * stat /*= NULL*/){
-	if(AutoHosts.Exists(stat)) Out.Put(this, stat->GetPrefix(), " ", stat->GetGame()->GetScen());
+	if(GetAutoHosts()->Exists(stat)) Out.Put(this, stat->GetPrefix(), " ", stat->GetGame()->GetScen());
 	else{
 		int i=0;
-		while(AutoHost * ah = AutoHosts.Get(i)) PrintStatus(ah);
+		while(AutoHost * ah = GetAutoHosts()->Get(i++)) PrintStatus(ah);
 	}
 }
 

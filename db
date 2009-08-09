@@ -21,6 +21,17 @@ CREATE TABLE IF NOT EXISTS `ScenarioList` (
   PRIMARY KEY  (`ScenIndex`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=utf8 AUTO_INCREMENT=39 ;
 
+--LobbyTime: Maximale von Spielern bestimmbare Lobbyzeit
+--SignOn: /signup bzw /nosignup setzen
+--Record: /record setzen
+--TCPPort: /tcpport setzen
+--UDPPort: /udpport setzen
+--QueryPort: Wth, das ist garnicht implementiert...
+--MaxQueueSize: Maximale, von spielern voreinstellbare Szenarienzahl
+--MaxExecTrials: Maximale Ausführversuche.
+--ConfigPath: /config setzen
+--Path: Pfad zum clonk-Ornder
+
 INSERT INTO `ScenarioList` (`ScenIndex`, `Path`, `HTMLName`, `HostChance`, `LeagueChance`, `LobbyTime`) VALUES
 (1, 'Worlds.c4f/Watercaves.c4s', 'Wasserh&ouml;hlen', 0, 0, 210),
 (2, 'Worlds.c4f/FoggyCliffs.c4s', 'Nebelklippen', 0, 0, 240),
