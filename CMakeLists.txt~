@@ -7,3 +7,7 @@ SET ( BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR} )
 
 ADD_SUBDIRECTORY( helpers )
 ADD_SUBDIRECTORY( src )
+
+ADD_EXECUTABLE( crctrl ${crctrl_source} )
+TARGET_LINK_LIBRARIES( crctrl pthread mysqlpp boost_regex-mt helpers/libhelpers.a )
+
