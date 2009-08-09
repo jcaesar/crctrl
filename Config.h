@@ -117,7 +117,7 @@ struct BanSet {
 	}
 };
 
-static class ConfigurationStore{ //Just a silly name. I only need it for the Constructor and the func-declarations.
+class Setting{
 	private:
 		pthread_mutex_t mutex;
 		struct{
@@ -146,57 +146,16 @@ static class ConfigurationStore{ //Just a silly name. I only need it for the Con
 		int MaxExecTrials;
 		int MaxQueueSize;
 	public:
-		ConfigurationStore(){
-			SetLoginData(DEFAULT_SQL_NAME, DEFAULT_SQL_PW, DEFAULT_SQL_DB, NULL); Login.addr = NULL;
-			Path = NULL;
-			ConfigPath = NULL;
-			pthread_mutex_init(&mutex, NULL);
-			ScenCount=0;
-			Scens = NULL;
-			BanCount=0;
-			Bans = NULL;
-			Standard();
-		}
-		void Standard(){
-			Ports.TCP=11112;
-			Ports.UDP=11113;
-			QueryPort=11110;
-			LobbyTime=180;
-			League=0.5f;
-			ScenCount=0;
-			ChanceTotal=0;
-			MaxQueueSize=3;
-			SignOn=true;
-			delete [] Path;
-			Path = new char[11];
-			strcpy(Path, "/usr/games");
-			delete [] ConfigPath;
-			ConfigPath = new char[1];
-			if(Bans){
-				Bans += BanCount;
-				while(BanCount--){
-					Bans--;
-					delete *Bans;
-				}
-				delete [] Bans;
-				Bans = NULL;
-			}
-			if(Scens) {
-				Scens += ScenCount;
-				while(ScenCount--){
-					Scens--;
-					delete *Scens;
-				}
-				delete [] Scens;
-				Scens = NULL;
-			}
-		}
+		Setting();
+		void Standard();
 		void Reload();
 		const ScenarioSet * GetScen(int);
 		const ScenarioSet * GetScen();
 		ScenarioSet * GetScen(const char *);
 		void SetLoginData(const char *, const char *, const char *, const char *);
 		const char * GetBan(const char *);
-} Config;
+};
+
+Setting * GetConfig();
 
 #endif

@@ -28,7 +28,7 @@ void AutoHost::Work(){
 	while(work){
 		CurrentGame = new Game(this);
 		pthread_mutex_lock(&mutex);
-		if(ScenQueue.empty()) CurrentGame -> SetScen(Config.GetScen());
+		if(ScenQueue.empty()) CurrentGame -> SetScen(GetConfig()->GetScen());
 		else {
 			const ScenarioSet * scn;
 			try {scn = ScenQueue.at(0);} //Vector sux, dunno why.
@@ -42,7 +42,7 @@ void AutoHost::Work(){
 		if(!work) break;
 		if(CurrentGame -> GetStatus() == Failed) {
 			Fails++;
-			if(Fails >= Config.MaxExecTrials) delete this;
+			if(Fails >= GetConfig()->MaxExecTrials) delete this;
 		} else Fails = 0;
 		delete CurrentGame;
 	}
@@ -55,7 +55,7 @@ Game * AutoHost::GetGame(){
 
 bool AutoHost::Enqueue(const ScenarioSet * scn){
 	pthread_mutex_lock(&mutex);
-	if(ScenQueue.size() >= Config.MaxQueueSize){
+	if(ScenQueue.size() >= GetConfig()->MaxQueueSize){
 		pthread_mutex_unlock(&mutex);
 		return false; //What about some kind of errno?
 	}

@@ -1,14 +1,68 @@
 
 #include "Config.h"
 
-void ConfigurationStore::SetLoginData(const char * usr, const char * pw, const char * db, const char * addr){
+static Setting Config;
+
+Setting * GetConfig(){
+	return &Config;
+}
+
+Setting::Setting(){
+	SetLoginData(DEFAULT_SQL_NAME, DEFAULT_SQL_PW, DEFAULT_SQL_DB, NULL); Login.addr = NULL;
+	Path = NULL;
+	ConfigPath = NULL;
+	pthread_mutex_init(&mutex, NULL);
+	ScenCount=0;
+	Scens = NULL;
+	BanCount=0;
+	Bans = NULL;
+	Standard();
+}
+
+void Setting::Standard(){
+	Ports.TCP=11112;
+	Ports.UDP=11113;
+	QueryPort=11110;
+	LobbyTime=180;
+	League=0.5f;
+	ScenCount=0;
+	ChanceTotal=0;
+	MaxQueueSize=3;
+	SignOn=true;
+	delete [] Path;
+	Path = new char[11];
+	strcpy(Path, "/usr/games");
+	delete [] ConfigPath;
+	ConfigPath = new char[1];
+	if(Bans){
+		Bans += BanCount;
+		while(BanCount--){
+			Bans--;
+			delete *Bans;
+		}
+		delete [] Bans;
+		Bans = NULL;
+	}
+	if(Scens) {
+		Scens += ScenCount;
+		while(ScenCount--){
+			Scens--;
+			delete *Scens;
+		}
+		delete [] Scens;
+		Scens = NULL;
+	}
+}
+
+
+void Setting::SetLoginData(const char * usr, const char * pw, const char * db, const char * addr){
 	if(usr != NULL) Login.usr = usr;
 	if(pw != NULL) Login.pw = pw;
 	if(db != NULL) Login.db = db;
 	if(addr != NULL) Login.addr = addr;
 }
 
-void ConfigurationStore::Reload(){
+void Setting::Reload(){
 	pthread_mutex_lock(&mutex);
 	Standard();
 	mysqlpp::Connection conn(false);
@@ -132,12 +186,12 @@ void ConfigurationStore::Reload(){
 	pthread_mutex_unlock(&mutex);
 }
 
-const ScenarioSet * ConfigurationStore::GetScen(int index){
+const ScenarioSet * Setting::GetScen(int index){
 	if(0 > index || index >= ScenCount) {return NULL;}
 	return *(index + Scens);
 }
 
-const ScenarioSet * ConfigurationStore::GetScen(){ //Do it by random.
+const ScenarioSet * Setting::GetScen(){ //Do it by random.
 	if(ScenCount == 0) return NULL; //No Scen = Silly person.
 	if(ScenCount == 1) return *Scens;  //One Scen = Bla, that's not gonna segv anymore, so noone testing could be annoyed.
 	srand((unsigned)time(NULL)); 
@@ -153,7 +207,7 @@ const ScenarioSet * ConfigurationStore::GetScen(){ //Do it by random.
 	return (*(ScenInst-1));
 }
 
-ScenarioSet * ConfigurationStore::GetScen(const char * search){
+ScenarioSet * Setting::GetScen(const char * search){
 	int cnt=ScenCount;
 	ScenarioSet ** ScenInst = Scens;
 	while(cnt--){
@@ -166,7 +220,7 @@ ScenarioSet * ConfigurationStore::GetScen(const char * search){
 	return NULL;
 }
 
-const char * ConfigurationStore::GetBan(const char * name){
+const char * Setting::GetBan(const char * name){
 	int cnt = BanCount;
 	BanSet ** BanInst; BanInst = Bans;
 	while(cnt--){

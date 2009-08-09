@@ -9,7 +9,7 @@ class StringCollector{
 		bool delete_data;
 		int length;
 	public:
-		StringCollector(const char * string = NULL) : data(string), next(NULL), length(-1), string_complete(0), delete_data(false) {}
+		StringCollector(const char * string = NULL) : data(string), next(NULL), length(-1), string_complete(0), delete_data(false) {} //When data ist NULL, we've got a Problem. Fixme.
 		~StringCollector() {
 			if(next != NULL) delete next;
 			if(string_complete || delete_data) delete [] data;
@@ -43,7 +43,7 @@ class StringCollector{
 			return data;
 		}
 		bool Push(const char * push){
-			if(string_complete) return false;
+			if(push == NULL || string_complete) return false;
 			if(next) return next->Push(push);
 			next = new StringCollector(push);
 			length = -1;

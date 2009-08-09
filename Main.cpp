@@ -39,8 +39,8 @@ int main(int argc, char* *argv)
 		}
 		argv++;
 	}
-	Config.SetLoginData(usr,pw,db,addr);
-	Config.Reload();
+	GetConfig()->SetLoginData(usr,pw,db,addr);
+	GetConfig()->Reload();
 	while(create_autohost--) new AutoHost();
 	new StreamControl(STDIN_FILENO,STDOUT_FILENO);
 	
@@ -55,7 +55,7 @@ int main(int argc, char* *argv)
 	memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family      = AF_INET;
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    servaddr.sin_port        = htons(Config.QueryPort);
+    servaddr.sin_port        = htons(GetConfig()->QueryPort);
     if (bind(list_s, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
 		std::cerr << "Could not bind to socket.\n";
 		Deathloop

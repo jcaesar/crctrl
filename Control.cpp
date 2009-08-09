@@ -26,7 +26,7 @@ void StreamControl::Work(){
 				Out.Put(this, "No Host selected.", NULL);
 			}
 		} else if(!cmd.compare("%reload")) {
-			Config.Reload();
+			GetConfig()->Reload();
 		} else if(startswith(&cmd,"%sel ")) {
 			sel = AutoHosts.Find(atoi(cmd.data() + 5));
 			if(sel == NULL) Out.Put(this, "No such host: ", cmd.data() + 5, NULL);

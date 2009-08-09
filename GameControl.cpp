@@ -15,12 +15,12 @@ Game::Game(AutoHost * parent) : //FIXME: Better use reference
 	Settings.PW = NULL;
 	ExecTrials=0;
 	//Standard Settings:
-	Settings.Ports.TCP=Config.Ports.TCP;
-	Settings.Ports.UDP=Config.Ports.UDP;
-	Settings.LobbyTime=Config.LobbyTime;
-	Settings.SignOn=Config.SignOn;
-	Settings.Record=Config.Record;
-	Settings.League = Config.League > static_cast<float>(rand())/RAND_MAX;
+	Settings.Ports.TCP=GetConfig()->Ports.TCP;
+	Settings.Ports.UDP=GetConfig()->Ports.UDP;
+	Settings.LobbyTime=GetConfig()->LobbyTime;
+	Settings.SignOn=GetConfig()->SignOn;
+	Settings.Record=GetConfig()->Record;
+	Settings.League = GetConfig()->League > static_cast<float>(rand())/RAND_MAX;
 	Status=Setting;
 }
 
@@ -72,9 +72,9 @@ void Game::Start(){
 		cmd += Settings.LobbyTime;
 		cmd += "\""; 
 	}
-	if(strlen(Config.ConfigPath)>0){
+	if(strlen(GetConfig()->ConfigPath)>0){
 		cmd += " /config:\"";
-		cmd += Config.ConfigPath;
+		cmd += GetConfig()->ConfigPath;
 		cmd += "\"";
 	}
 	if(Settings.PW && strlen(Settings.PW)>0){
@@ -121,10 +121,10 @@ int Game::Start(const char * args){
 				if (dup2(fderr[1], STDERR_FILENO) != STDERR_FILENO) std::cerr << "Error with stderr" << std::endl;
 				close(fderr[1]);
 			}
-			char * fullpath = new char[strlen(Config.Path) + 7];
-			strcpy(fullpath, Config.Path);
-			strcpy(fullpath+strlen(Config.Path), "/clonk");
-			execl(fullpath, Config.Path, args, NULL); //Think about replacing this by another function. Perhaps you need to get to that exit(child) down there...
+			char * fullpath = new char[strlen(GetConfig()->Path) + 7];
+			strcpy(fullpath, GetConfig()->Path);
+			strcpy(fullpath+strlen(GetConfig()->Path), "/clonk");
+			execl(fullpath, GetConfig()->Path, args, NULL); //Think about replacing this by another function. Perhaps you need to get to that exit(child) down there...
 			//When execl does fine, it will never return.
 			std::cerr << "Could not Start. Error: " << errno << std::endl; //Give parent process a notice.
 			close(fd1[0]);
@@ -159,7 +159,7 @@ void Game::Control(){
 			} else if(!regex_ret[2].compare("list")) {
 				StringCollector list("Folgende Szenarien koennen gestartet werden:\n");
 				const ScenarioSet * scn;
-				for(int i=0; scn = Config.GetScen(i); i++){
+				for(int i=0; scn = GetConfig()->GetScen(i); i++){
 					const char * name = scn->GetName(0);
 					if(name){
 						list.Push("-");
@@ -180,9 +180,9 @@ void Game::Control(){
 				ScenarioSet * scn;
 				if(params){
 					*params = 0;
-					scn = Config.GetScen(cmd);
+					scn = GetConfig()->GetScen(cmd);
 					*params = ' ';
-				} else scn = Config.GetScen(cmd);
+				} else scn = GetConfig()->GetScen(cmd);
 				if(scn != 0) {
 					scn = new ScenarioSet(scn); //Make a Copy of it.
 					if(strstr(cmd, " -liga")) scn -> SetLeague(1);
@@ -191,7 +191,7 @@ void Game::Control(){
 					if(pos = strstr(cmd, " -lobby:")){
 						pos += 8;
 						int time = atoi(pos);
-						if(time > Config.LobbyTime) time = Config.LobbyTime;
+						if(time > GetConfig()->LobbyTime) time = GetConfig()->LobbyTime;
 						if(time < 10) time = 10;
 						scn -> SetTime(time);
 					}
@@ -224,17 +224,17 @@ void Game::Control(){
 				SendMsg("Jetzt geht es los!\n", NULL);
 				SendMsg("Viel Glueck und viel Spass!\n", NULL);
 			} else if(regex_match(line, regex_ret, rx::cl_join)){
-				if(!Config.GetBan(regex_ret[1].str().c_str())){	
+				if(!GetConfig()->GetBan(regex_ret[1].str().c_str())){	
 					SendMsg("Hi! Viel Spass beim Spielen, ", regex_ret[1].str().data(), ".\n", NULL);
 					SendMsg(2, "Mehr ueber diesen Server erfaehrst du unter cserv.game-host.org\nJeder kann bestimmen, was gehostet wird. Gib %hilf ein!\n", NULL);
 				}
 			} else if(regex_match(line, regex_ret, rx::cl_conn)){
-				if(const char * reason = Config.GetBan(regex_ret[1].str().c_str())){
+				if(const char * reason = GetConfig()->GetBan(regex_ret[1].str().c_str())){
 					SendMsg("Sorry, ", regex_ret[1].str().data(), " aber du stehst auf meiner Abschussliste. (", reason, ")\n");
 					SendMsg(3, "/kick ", regex_ret[1].str().data(), "\n");
 				}
 			} else if(regex_match(line, regex_ret, rx::cl_part)){
-				if(!Config.GetBan(regex_ret[1].str().data())) SendMsg("Boeh, ", regex_ret[1].str().data(), " ist ein Leaver.\n", NULL);
+				if(!GetConfig()->GetBan(regex_ret[1].str().data())) SendMsg("Boeh, ", regex_ret[1].str().data(), " ist ein Leaver.\n", NULL);
 				/*mysqlpp::Connection conn(false);
 				if (conn.connect(Login.db, Login.addr, Login.usr, Login.pw)) {
 					std::string querystring;
@@ -308,7 +308,7 @@ Game::~Game(){
 
 bool Game::Fail(){
 	ExecTrials++;
-	if(ExecTrials >= Config.MaxExecTrials) {
+	if(ExecTrials >= GetConfig()->MaxExecTrials) {
 		Out.Put(Parent, OutPrefix, " Maximum execution attempts exceeded.", NULL);
 		Status = Failed;
 		return true;
