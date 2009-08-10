@@ -1,8 +1,8 @@
 #include "GameControl.h"
 
 Game::Game(AutoHost * parent) : //FIXME: Better use reference
-	Parent(parent),
-	OutPrefix(parent->GetPrefix())
+	OutPrefix(parent->GetPrefix()),
+	Parent(parent)
 {
 	Parent = parent;
 	pthread_mutex_init(&msgmutex, NULL); //Deleted in MsgQueue
@@ -88,20 +88,19 @@ void Game::Start(){
 	Start(cmd.GetBlock());
 }
 
-int Game::Start(const char * args){
+void Game::Start(const char * args){
 	int fd1[2];
 	int fd2[2];
 	int fderr[2];
-	pid_t child, realchild;
-	int status;
+	pid_t child;
 	Status=PreLobby;
 	if ( (pipe(fd1) < 0) || (pipe(fd2) < 0) || (pipe(fderr) < 0) ){
 		std::cerr << "Error opening Pipes." << std::endl;
 		Fail();
-		return -2;
+		return;
 	}
 	child = fork();
-	if(child < 0) { std::cerr << "Error forking process." << std::endl; Fail(); return -3;}
+	if(child < 0) { std::cerr << "Error forking process." << std::endl; Fail(); return;}
 	if(child == 0){
 		child = fork();
 		if(child < 0) exit(1);
@@ -135,6 +134,7 @@ int Game::Start(const char * args){
 		raise(SIGKILL); //FIXME!
 	}
 	pid = NULL; //FIXME!
+	//int status;
 	/*waitpid(child, &status, 0);
 	pid = WEXITSTATUS(status);*/
 	close(fd1[0]);
@@ -159,7 +159,7 @@ void Game::Control(){
 			} else if(!regex_ret[2].compare("list")) {
 				StringCollector list("Folgende Szenarien koennen gestartet werden:\n");
 				const ScenarioSet * scn;
-				for(int i=0; scn = GetConfig()->GetScen(i); i++){
+				for(int i=0; (scn = GetConfig()->GetScen(i)); i++){
 					const char * name = scn->GetName(0);
 					if(name){
 						list.Push("-");
@@ -188,14 +188,14 @@ void Game::Control(){
 					if(strstr(cmd, " -liga")) scn -> SetLeague(1);
 					else scn -> SetLeague(0);
 					char * pos;
-					if(pos = strstr(cmd, " -lobby:")){
+					if((pos = strstr(cmd, " -lobby:"))){
 						pos += 8;
 						int time = atoi(pos);
 						if(time > GetConfig()->LobbyTime) time = GetConfig()->LobbyTime;
 						if(time < 10) time = 10;
 						scn -> SetTime(time);
 					}
-					if(pos = strstr(cmd, " -pw:")){
+					if((pos = strstr(cmd, " -pw:"))){
 						pos += 5;
 						char chr = ' ';
 						if(*pos == '"') {chr = '"'; pos++;}
@@ -284,13 +284,13 @@ void Game::Control(){
 }
 
 void Game::Exit(bool soft = true){
-	if(soft)
+	if(soft){ 
 		if(pipe_out != 0) {
 			close(pipe_out);
 			pipe_out=0;
 			//I just hope, that CR closes by saying this. If it does not, I will have Thread and memory leaks...
 		}
-	else if(pid > 0) kill(pid, SIGKILL);
+	} else if(pid > 0) kill(pid, SIGKILL);
 }
 
 Game::~Game(){
@@ -309,8 +309,8 @@ Game::~Game(){
 bool Game::Fail(){
 	ExecTrials++;
 	if(ExecTrials >= GetConfig()->MaxExecTrials) {
-		GetOut()->Put(Parent, OutPrefix, " Maximum execution attempts exceeded.", NULL);
 		Status = Failed;
+		GetOut()->Put(Parent, OutPrefix, " Maximum execution attempts for game exceeded.", NULL);
 		return true;
 	} else {
 		sleep(5);
@@ -320,13 +320,12 @@ bool Game::Fail(){
 }
 
 bool Game::SendMsg(const char * first, ...){
-	if(!pipe_out) return false;
+	if(!pipe_out || Status != Lobby || Status != Run) return false;
 	va_list vl;
 	va_start(vl, first);
 	StringCollector msg(first);
 	const char * str;
-	while(str = va_arg(vl, const char *))
-		msg.Push(str);
+	while((str = va_arg(vl, const char *))) msg.Push(str);
 	//if(str + strlen(str) -1 != '\n') msg.Push("\n");
 	msg.GetBlock();
 	va_end(vl);
@@ -341,7 +340,7 @@ void Game::SendMsg(int secs, const char * first, ...){
 	va_start(vl, first);
 	StringCollector msg(first);
 	const char * str;
-	while(str = va_arg(vl, const char *))
+	while((str = va_arg(vl, const char *)))
 		msg.Push(str);
 	//if(str + strlen(str) -1 != '\n') msg.Push("\n");
 	msg.GetBlock(); 

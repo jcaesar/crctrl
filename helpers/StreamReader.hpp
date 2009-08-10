@@ -11,16 +11,22 @@ class StreamReader{
 		char *buff;
 		char *buffadr;
 		char *buffadr2;
+		pthread_t readthread;
 	public:
 		const int fd;
-		StreamReader(const int fd_read) : fd(fd_read) {
+		StreamReader(const int fd_read) : readthread(NULL), fd(fd_read) {
 			buffadr=new char[MAXCHARS];
 			buff=buffadr;
 			rv=0;
 		}
-		~StreamReader(){delete[] buffadr; close(fd);}
+		~StreamReader(){
+			if(readthread) pthread_cancel(readthread);
+			delete [] buffadr;
+			close(fd);
+		}
 		bool ReadLine(std::string *line){return(ReadLine(line, 10));}
 		bool ReadLine(std::string *line, const char delim){
+			readthread = pthread_self();
 			*line="";
 			do{
 				//std::cout << reinterpret_cast<int>(buffadr) << " " << reinterpret_cast<int>(buff) << " " << rv << std::endl;

@@ -3,20 +3,20 @@
 #include "StringFunctions.hpp"
 
 bool startswith(const std::string *str1, const std::string *str2){
-	int len=str2->length();
+	unsigned int len=str2->length();
 	if(len > str1->length()) return 0;
 	return (memcmp(str1->data(), str2->data(), len)==0);
 }
 
 bool startswith(const std::string *str1, const char *str2){
-	int len=strlen(str2);
+	unsigned int len=strlen(str2);
 	if(len > str1->length()) return 0;
 	return (memcmp(str1->data(), str2, len)==0);
 }
 
 bool startswith(const std::string *str1, const char str2_2){
 	const char *str2; str2=&str2_2;
-	int len=strlen(str2);
+	unsigned int len=strlen(str2);
 	if(len > str1->length()) return 0;
 	return (memcmp(str1->data(), str2, len)==0);
 }

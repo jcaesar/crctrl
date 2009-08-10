@@ -20,5 +20,6 @@ SET ( crctrl_source
 )
 
 ADD_EXECUTABLE( crctrl ${crctrl_source} )
+ADD_DEFINITIONS(-Wall -g)
 TARGET_LINK_LIBRARIES( crctrl pthread mysqlpp boost_regex-mt ${BASE_DIR}/helpers/libhelpers.a )
 

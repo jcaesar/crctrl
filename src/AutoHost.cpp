@@ -7,7 +7,7 @@ AutoHostList * GetAutoHosts(){
 	return &AutoHosts;
 }
 
-AutoHost::AutoHost() : work(true), Fails(0), ID(AutoHosts.Add(this)) {
+AutoHost::AutoHost() : ID(AutoHosts.Add(this)), Fails(0), work(true) {
 	OutPrefix = new char[11];
 	sprintf(OutPrefix, "a#%d", ID);
 	pthread_mutex_init(&mutex, NULL);
@@ -26,6 +26,7 @@ AutoHost::~AutoHost(){
 	if(pthread_self() != tid) pthread_join(tid, NULL); //And my own thread will end when all that is done. 
 	pthread_mutex_destroy(&mutex);
 	AutoHosts.Remove(this);
+	GetOut()->Put(NULL, OutPrefix, " Terminated.", NULL);
 	delete OutPrefix;
 }
 
@@ -48,11 +49,14 @@ void AutoHost::Work(){
 		if(!work) break;
 		if(CurrentGame -> GetStatus() == Failed) {
 			Fails++;
-			if(Fails >= GetConfig()->MaxExecTrials) delete this;
+			if(Fails >= GetConfig()->MaxExecTrials) {
+				GetOut()->Put(this, OutPrefix, " Maximum execution attempts for AutoHost exceeded.", NULL);
+				delete this;
+				break;
+			}
 		} else Fails = 0;
 		delete CurrentGame;
 	}
-	GetOut()->Put(NULL, OutPrefix, " Terminated.", NULL);
 }
 
 Game * AutoHost::GetGame(){

@@ -33,24 +33,24 @@ class ScenarioSet {
 		const int DbIndex;
 	public:
 		ScenarioSet(int index, bool del=true) :
-			DbIndex(index),
+			ScenPath(NULL),
+			ExtraNames(NULL),
+			PW(NULL),
 			NameCount(0),
 			DeleteStrings(del),
-			ScenPath(NULL),
 			Fixed(false),
-			PW(NULL),
-			ExtraNames(NULL)
+			DbIndex(index)
 		{}
 		ScenarioSet(const ScenarioSet * base) :
-			NameCount (0),
 			ExtraNames (NULL),
+			PW(NULL),
+			NameCount (0),
+			DeleteStrings(true),
 			LobbyTime (base->LobbyTime),
 			League (base->League),
 			HostChance (base->HostChance),
 			Fixed(false),
-			DbIndex(base->DbIndex),
-			PW(NULL),
-			DeleteStrings(true)
+			DbIndex(base->DbIndex)
 		{ //Names and pw will be ignored
 			ScenPath = new char[strlen(base->ScenPath) + 1];
 			strcpy(ScenPath, base->ScenPath);
@@ -143,8 +143,8 @@ class Setting{
 		BanSet ** Bans;
 		int BanCount;
 		float ChanceTotal;
-		int MaxExecTrials;
-		int MaxQueueSize;
+		unsigned int MaxExecTrials;
+		unsigned int MaxQueueSize;
 	public:
 		Setting();
 		void Standard();

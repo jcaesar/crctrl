@@ -55,7 +55,7 @@ void StreamControl::Work(){
 }
 
 void StreamControl::PrintStatus(AutoHost * stat /*= NULL*/){
-	if(GetAutoHosts()->Exists(stat)) Out.Put(this, stat->GetPrefix(), " ", stat->GetGame()->GetScen());
+	if(GetAutoHosts()->Exists(stat)) Out.Put(this, stat->GetPrefix(), " ", stat->GetGame()->GetScen(), NULL);
 	else{
 		int i=0;
 		while(AutoHost * ah = GetAutoHosts()->Get(i++)) PrintStatus(ah);
@@ -111,7 +111,7 @@ void OutprintControl::Put(void * context, const char * first, ...){
 	va_start(vl, first);
 	StringCollector msg(first);
 	const char * str;
-	while(str = va_arg(vl, const char *))
+	while((str = va_arg(vl, const char *)))
 		msg.Push(str);
 	bool endlbr = true;
 	if(*(msg.GetBlock() + msg.GetLength() - 1) == '\n') endlbr = false;

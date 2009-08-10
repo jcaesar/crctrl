@@ -39,13 +39,13 @@ class Game
 		} Settings;
 		const char * OutPrefix;
 		GameStatus Status;
-		int ExecTrials;
+		unsigned int ExecTrials;
 		pthread_t msgtid;
 		pthread_cond_t msgcond;
 		pthread_mutex_t msgmutex;
 		bool use_conds;
 		bool cleanup;
-		int Start(const char *);
+		void Start(const char *);
 		bool Fail();
 		void Control();
 		void MsgTimer();

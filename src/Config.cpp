@@ -194,7 +194,7 @@ const ScenarioSet * Setting::GetScen(int index){
 const ScenarioSet * Setting::GetScen(){ //Do it by random.
 	if(ScenCount == 0) return NULL; //No Scen = Silly person.
 	if(ScenCount == 1) return *Scens;  //One Scen = Bla, that's not gonna segv anymore, so noone testing could be annoyed.
-	srand((unsigned)time(NULL)); 
+	srand((unsigned)time(NULL) ^ rand()); 
 	double rnd=fmod(rand(), ChanceTotal*16) / 16;
 	ScenarioSet ** ScenInst = Scens;
 	while(rnd >= 0){
@@ -212,7 +212,7 @@ ScenarioSet * Setting::GetScen(const char * search){
 	ScenarioSet ** ScenInst = Scens;
 	while(cnt--){
 		const char * name;
-		for(int i=0; name=(*ScenInst)->GetName(i); i++){
+		for(int i=0; (name=(*ScenInst)->GetName(i)); i++){
 			if(nocasecmp(search, name)) return *ScenInst;
 		}
 		ScenInst++;

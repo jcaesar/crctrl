@@ -9,8 +9,8 @@ class StreamControl{
 	private:
 		void Work();
 		static void * ThreadWrapper(void *);
-		StreamReader * sr;
 		const int fd_out;
+		StreamReader * sr;
 		AutoHost * sel;
 		pthread_t tid;
 		void PrintStatus(AutoHost * = NULL);

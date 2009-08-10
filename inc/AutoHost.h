@@ -14,7 +14,7 @@ class AutoHost{
 		Game * CurrentGame;
 		static void * ThreadWrapper(void *);
 		void Work();
-		int Fails;
+		unsigned int Fails;
 		bool work;
 		pthread_mutex_t mutex;
 		std::vector <const ScenarioSet*> ScenQueue;

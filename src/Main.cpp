@@ -12,7 +12,7 @@ void CrashHandler(int);
 void EndHandler(int);
 void SigPipeHandler(int);
 
-int main(int argc, char* *argv)
+int main(int argc, char ** argv)
 {
 	signal(SIGBUS, CrashHandler);
 	signal(SIGILL, CrashHandler);
@@ -24,6 +24,7 @@ int main(int argc, char* *argv)
 	signal(SIGINT, EndHandler);
 	signal(SIGPIPE, SigPipeHandler);
 
+	char * farg = *argv;
 	if(argc-- > 0) argv++;
 	int create_autohost = 0; char * db = NULL, * usr = NULL, * pw = NULL, * addr = NULL;
 	while(argc--){
@@ -33,8 +34,9 @@ int main(int argc, char* *argv)
 		else if(!strncmp(*argv, "addr:", 5)) addr=*argv+5;
 		else if(!strcmp(*argv, "auto")) create_autohost++;
 		else {
-			std::cerr << printf("Usage: %s %s %s %s %s", *argv, "db:<mysql-database>", "usr:<mysql-user>", "pw:<mysql-password>", "[auto]") << std::endl;
-			std::cerr << printf("Example: %s db:clonk_cserv_database usr:cserv pw:cservs_password auto", *argv);
+			std::cerr << "Failing to parse \"" << *argv << "\"."  << std::endl;
+			std::cerr << "Usage: " << farg << " db:<mysql-database> usr:<mysql-user> pw:<mysql-password> [auto]" << std::endl;
+			std::cerr << "Example: " << farg << " db:clonk_cserv_database usr:cserv pw:cservs_password auto" << std::endl;
 			exit(3);
 		}
 		argv++;
