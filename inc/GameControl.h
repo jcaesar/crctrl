@@ -14,6 +14,7 @@ class Game;
 #include "AutoHost.h"
 #include <sys/wait.h>
 #include <errno.h>
+#include <iconv.h>
 
 enum GameStatus {Setting, PreLobby, Lobby, Load, Run, End, Failed};
 struct TimedMsg{time_t Stamp; char * Msg; ~TimedMsg(){if(Msg != NULL) delete Msg;}};

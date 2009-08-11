@@ -230,7 +230,7 @@ void Game::Control(){
 				}
 			} else if(regex_match(line, regex_ret, rx::cl_conn)){
 				if(const char * reason = GetConfig()->GetBan(regex_ret[1].str().c_str())){
-					//SendMsg("Sorry, ", regex_ret[1].str().data(), " aber du stehst auf meiner Abschussliste. (", reason, ")\n");
+					//SendMsg("Sorry, ", regex_ret[1].str().data(), " aber du stehst auf meiner Abschussliste. (", reason, ")\n"); FIXME: Why can't I do that?
 					SendMsg(3, "/kick ", regex_ret[1].str().data(), "\n");
 				}
 			} else if(regex_match(line, regex_ret, rx::cl_part)){
@@ -328,6 +328,18 @@ bool Game::SendMsg(const char * first, ...){
 	//if(str + strlen(str) -1 != '\n') msg.Push("\n");
 	msg.GetBlock();
 	va_end(vl);
+	iconv_t cd;
+	char * inptr;
+	size_t in_size = msg.GetLength();
+	inptr = new char[in_size+1];
+	strcpy(inptr, msg.GetBlock());
+	char out[100];
+	size_t out_size = sizeof(out);
+	char * outptr = out;
+	if ((iconv_t)(-1) == (cd = iconv_open("UTF8", "ISO 8859-1"))) {/*delete [] inptr;*/ return false;}
+	if ((size_t)(-1) == iconv(cd, &inptr, &in_size, &outptr, &out_size)) {/*delete [] inptr;*/ return false;}
+	/*delete [] inptr;*/
+	if (-1 == iconv_close(cd)); //FIXME this here is fail.
 	if(*(msg.GetBlock())=='/') //Some commands don't have feedback. Just do a notification.
 		GetOut()->Put(Parent, OutPrefix, " ", msg.GetBlock(), NULL);
 	return (write(pipe_out, msg.GetBlock(), msg.GetLength())==msg.GetLength());
