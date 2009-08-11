@@ -227,6 +227,7 @@ const char * Setting::GetBan(const char * name){
 		if(regex_match(name, *((*BanInst)->NamePattern))){
 			return (*BanInst)->Reason;
 		}
+		BanInst++; //Dereferencing with gdb: print (*(((*BanInst)->NamePattern)->m_pimpl.px)).m_expression
 	}
 	return NULL;
 }

@@ -20,7 +20,7 @@ class StreamReader{
 			rv=0;
 		}
 		~StreamReader(){
-			if(readthread) pthread_cancel(readthread);
+			if(readthread != pthread_self() && readthread) pthread_cancel(readthread);
 			delete [] buffadr;
 			close(fd);
 		}

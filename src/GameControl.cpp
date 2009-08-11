@@ -109,15 +109,15 @@ void Game::Start(const char * args){
 			close(fd2[0]);
 			close(fderr[0]);
 			if (fd1[0] != STDIN_FILENO){
-				if (dup2(fd1[0], STDIN_FILENO) != STDIN_FILENO) std::cerr << "Error with stdin" << std::endl;
+				if (dup2(fd1[0], STDIN_FILENO) != STDIN_FILENO) std::cout << "Error with stdin" << std::endl;
 				close(fd1[0]);
 			}
 			if (fd2[1] != STDOUT_FILENO){
-				if (dup2(fd2[1], STDOUT_FILENO) != STDOUT_FILENO) std::cerr << "Error with stdout" << std::endl;
+				if (dup2(fd2[1], STDOUT_FILENO) != STDOUT_FILENO) std::cout << "Error with stdout" << std::endl;
 				close(fd2[1]);
 			}
 			if (fderr[1] != STDERR_FILENO){
-				if (dup2(fderr[1], STDERR_FILENO) != STDERR_FILENO) std::cerr << "Error with stderr" << std::endl;
+				if (dup2(fderr[1], STDERR_FILENO) != STDERR_FILENO) std::cout << "Error with stderr" << std::endl;
 				close(fderr[1]);
 			}
 			char * fullpath = new char[strlen(GetConfig()->Path) + 7];
@@ -125,7 +125,7 @@ void Game::Start(const char * args){
 			strcpy(fullpath+strlen(GetConfig()->Path), "/clonk");
 			execl(fullpath, GetConfig()->Path, args, NULL);
 			//When execl does fine, it will never return.
-			std::cerr << "Could not Start. Error: " << errno << std::endl; //Give parent process a notice.
+			std::cout << "Could not Start. Error: " << errno << std::endl; //Give parent process a notice.
 			close(fd1[0]);
 			close(fd2[1]);
 			close(fderr[1]);
@@ -230,7 +230,7 @@ void Game::Control(){
 				}
 			} else if(regex_match(line, regex_ret, rx::cl_conn)){
 				if(const char * reason = GetConfig()->GetBan(regex_ret[1].str().c_str())){
-					SendMsg("Sorry, ", regex_ret[1].str().data(), " aber du stehst auf meiner Abschussliste. (", reason, ")\n");
+					//SendMsg("Sorry, ", regex_ret[1].str().data(), " aber du stehst auf meiner Abschussliste. (", reason, ")\n");
 					SendMsg(3, "/kick ", regex_ret[1].str().data(), "\n");
 				}
 			} else if(regex_match(line, regex_ret, rx::cl_part)){
@@ -276,10 +276,9 @@ void Game::Control(){
 				SendMsg("/set maxplayer 1337\n", NULL);
 			}
 		}
-		line = "";
 	}
-	if(Status==PreLobby) Fail(); return;
 	sr = NULL;
+	if(Status==PreLobby) Fail(); return;
 	GetOut()->Put(Parent, OutPrefix, " Clonk Rage terminated.", NULL);
 }
 
@@ -320,7 +319,7 @@ bool Game::Fail(){
 }
 
 bool Game::SendMsg(const char * first, ...){
-	if(!pipe_out || Status != Lobby || Status != Run) return false;
+	if(!pipe_out || (Status != Lobby && Status != Run)) return false;
 	va_list vl;
 	va_start(vl, first);
 	StringCollector msg(first);
