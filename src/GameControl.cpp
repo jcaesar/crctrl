@@ -4,12 +4,7 @@ Game::Game(AutoHost * parent) : //FIXME: Better use reference
 	OutPrefix(parent->GetPrefix()),
 	Parent(parent)
 {
-	Parent = parent;
-	pthread_mutex_init(&msgmutex, NULL); //Deleted in MsgQueue
-	pthread_cond_init(&msgcond, NULL);   // -"-
-	use_conds = true;
 	cleanup=false;
-	msgtid=NULL;
 	pid=NULL;
 	Settings.Scen = NULL;
 	Settings.PW = NULL;
@@ -22,6 +17,15 @@ Game::Game(AutoHost * parent) : //FIXME: Better use reference
 	Settings.Record=GetConfig()->Record;
 	Settings.League = GetConfig()->League > static_cast<float>(rand())/RAND_MAX;
 	Status=Setting;
+}
+
+void Game::Init() {
+	if(msg_ready) return;
+	pthread_mutex_init(&msgmutex, NULL); //Deleted in MsgQueue
+	pthread_cond_init(&msgcond, NULL);   // -"-
+	if(msgtid == 0) pthread_create(&msgtid, NULL, &Game::MsgTimer, NULL);
+	msg_ready = true;
+	msgtid=NULL;
 }
 
 bool Game::SetScen(const char * scen){
@@ -92,9 +96,10 @@ void Game::Start(const char * args){
 	int fd1[2];
 	int fd2[2];
 	int fderr[2];
+	int fdtmp[2];
 	pid_t child;
 	Status=PreLobby;
-	if ( (pipe(fd1) < 0) || (pipe(fd2) < 0) || (pipe(fderr) < 0) ){
+	if ( (pipe(fd1) < 0) || (pipe(fd2) < 0) || (pipe(fderr) < 0) || (pipe(fdtmp) < 0) ){
 		std::cerr << "Error opening Pipes." << std::endl;
 		Fail();
 		return;
@@ -102,6 +107,7 @@ void Game::Start(const char * args){
 	child = fork();
 	if(child < 0) { std::cerr << "Error forking process." << std::endl; Fail(); return;}
 	if(child == 0){
+		close(fdtmp[0]);
 		child = fork();
 		if(child < 0) exit(1);
 		if(child == 0){
@@ -130,20 +136,26 @@ void Game::Start(const char * args){
 			close(fd2[1]);
 			close(fderr[1]);
 		}
-		//exit(child); // damit init (A) als Vater übernimmt und liefert PID vom Enkel als exit status "böser" hack
-		raise(SIGKILL); //FIXME!
+		char pidchr [11];
+		sprintf(pidchr, "%d", child);
+		write(fdtmp[1], pidchr, strlen(pidchr));
+		close(fdtmp[1]);
+		raise(SIGKILL);
 	}
-	pid = NULL; //FIXME!
-	//int status;
-	/*waitpid(child, &status, 0);
-	pid = WEXITSTATUS(status);*/
+	close(fdtmp[1]);
+	waitpid(child, NULL, 0);
+	StreamReader pidread (fdtmp[0]);
+	std::string pids;
+	pidread.ReadLine(&pids);
+	pid = atoi(pids.c_str());
+	close(fdtmp[0]);
 	close(fd1[0]);
 	close(fd2[1]);
 	close(fderr[1]);
 	sr=new StreamReader(fd2[0]);
 	pipe_out=fd1[1];
 	pipe_err=fderr[0];
-	if(msgtid == 0) pthread_create(&msgtid, NULL, &Game::MsgThreadWrapper, this);
+	if(!msg_ready) Init();
 	Control();
 }
 
@@ -230,8 +242,8 @@ void Game::Control(){
 				}
 			} else if(regex_match(line, regex_ret, rx::cl_conn)){
 				if(const char * reason = GetConfig()->GetBan(regex_ret[1].str().c_str())){
-					//SendMsg("Sorry, ", regex_ret[1].str().data(), " aber du stehst auf meiner Abschussliste. (", reason, ")\n"); FIXME: Why can't I do that?
-					SendMsg(3, "/kick ", regex_ret[1].str().data(), "\n");
+					//SendMsg("Sorry, ", regex_ret[1].str().data(), " aber du stehst auf meiner Abschussliste. (", reason, ")\n");
+					SendMsg("/kick ", regex_ret[1].str().data(), "\n");
 				}
 			} else if(regex_match(line, regex_ret, rx::cl_part)){
 				if(!GetConfig()->GetBan(regex_ret[1].str().data())) SendMsg("Boeh, ", regex_ret[1].str().data(), " ist ein Leaver.\n", NULL);
@@ -285,9 +297,10 @@ void Game::Control(){
 void Game::Exit(bool soft = true){
 	if(soft){ 
 		if(pipe_out != 0) {
-			close(pipe_out);
+			int temp_pipe = pipe_out;
 			pipe_out=0;
-			//I just hope, that CR closes by saying this. If it does not, I will have Thread and memory leaks...
+			close(temp_pipe);
+			//I just hope, that CR closes by saying this. If it does not, I will have problems...
 		}
 	} else if(pid > 0) kill(pid, SIGKILL);
 }
@@ -295,12 +308,20 @@ void Game::Exit(bool soft = true){
 Game::~Game(){
 	cleanup = true;
 	Exit();
-	if(use_conds) pthread_cond_signal(&msgcond);
-	if(pid > 0) kill(pid, SIGKILL); //Make sure, there does nothing rest in the process table
-	waitpid(pid, NULL, WNOHANG); //Funny, but Guenther said, it would be usefull against clonk <defunct>. But it is not.
+	if(pid > 0) kill(pid, SIGKILL);
+	waitpid(pid, NULL, WNOHANG);
 	if(Settings.Scen) delete [] Settings.Scen;
 	if(Settings.PW) delete [] Settings.PW;
 	if(msgtid) {pthread_cancel(msgtid); msgtid=NULL;}
+	pthread_cond_destroy(&msgcond);
+	pthread_mutex_destroy(&msgmutex);
+}
+
+void Game::Deinit(){
+	if(!msg_ready) return;
+	msg_ready = false;
+	pthread_cond_signal(&msgcond);
+	if(msgtid) {pthread_join(msgtid, NULL); msgtid=NULL;}
 	pthread_cond_destroy(&msgcond);
 	pthread_mutex_destroy(&msgmutex);
 }
@@ -328,18 +349,6 @@ bool Game::SendMsg(const char * first, ...){
 	//if(str + strlen(str) -1 != '\n') msg.Push("\n");
 	msg.GetBlock();
 	va_end(vl);
-	iconv_t cd;
-	char * inptr;
-	size_t in_size = msg.GetLength();
-	inptr = new char[in_size+1];
-	strcpy(inptr, msg.GetBlock());
-	char out[100];
-	size_t out_size = sizeof(out);
-	char * outptr = out;
-	if ((iconv_t)(-1) == (cd = iconv_open("UTF8", "ISO 8859-1"))) {/*delete [] inptr;*/ return false;}
-	if ((size_t)(-1) == iconv(cd, &inptr, &in_size, &outptr, &out_size)) {/*delete [] inptr;*/ return false;}
-	/*delete [] inptr;*/
-	if (-1 == iconv_close(cd)); //FIXME this here is fail.
 	if(*(msg.GetBlock())=='/') //Some commands don't have feedback. Just do a notification.
 		GetOut()->Put(Parent, OutPrefix, " ", msg.GetBlock(), NULL);
 	return (write(pipe_out, msg.GetBlock(), msg.GetLength())==msg.GetLength());
@@ -357,25 +366,24 @@ void Game::SendMsg(int secs, const char * first, ...){
 	msg.GetBlock(); 
 	va_end(vl);
 	//pthread_mutex_lock(&mutex);
-	TimedMsg * tmsg = new TimedMsg; //Deleted in Game::MsgTimer
-	tmsg->Stamp = stamp;
-	tmsg->Msg = new char[msg.GetLength()+1]; //Deleted in D'tor of struct TimedMsg
-	strcpy(tmsg->Msg,msg.GetBlock());
-	MsgQueue.push_back(tmsg); //No need to lock here.
-	if(use_conds) pthread_cond_signal(&msgcond); //Update
+	if(msg_ready){
+		TimedMsg * tmsg = new TimedMsg; //Deleted in Game::MsgTimer
+		tmsg->Stamp = stamp;
+		tmsg->Msg = new char[msg.GetLength()+1]; //Deleted in D'tor of struct TimedMsg
+		tmsg->SendTo = this;
+		strcpy(tmsg->Msg,msg.GetBlock());
+		MsgQueue.push_back(tmsg); //No need to lock here.
+		if(msg_ready) pthread_cond_signal(&msgcond); //Update
+	} else {
+		SendMsg(msg.GetBlock());
+	}
 }
-
 
 bool Game::SendMsg(const std::string msg){
 	return SendMsg(msg.c_str(), NULL);
 }
 
-void * Game::MsgThreadWrapper(void * p) {
-	static_cast<Game*>(p)->MsgTimer();
-	return NULL;
-}
-
-void Game::MsgTimer(){
+void * Game::MsgTimer(void * foo){
 	pthread_mutex_lock(&msgmutex); //Whyever.
 	time_t nextevent = 0;
 	while(true){
@@ -384,12 +392,12 @@ void Game::MsgTimer(){
 			ts.tv_sec = nextevent; 
 			pthread_cond_timedwait(&msgcond, &msgmutex, &ts);
 		} else pthread_cond_wait(&msgcond, &msgmutex);
-		if(cleanup) 
+		if(!msg_ready) 
 			break;
 		nextevent=0;
 		int i=MsgQueue.size(); while(i-->0){
 			if(MsgQueue[i]->Stamp <= time(NULL)){
-				SendMsg(MsgQueue[i]->Msg, NULL);
+				(MsgQueue[i]->SendTo)->SendMsg(MsgQueue[i]->Msg, NULL);
 				delete MsgQueue[i];
 				MsgQueue.erase(MsgQueue.begin()+i);
 			} else {
@@ -397,7 +405,7 @@ void Game::MsgTimer(){
 			}
 		}
 	}
-	use_conds=false;
 	pthread_mutex_unlock(&msgmutex);
+	return NULL;
 }
 

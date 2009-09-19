@@ -14,10 +14,9 @@ class Game;
 #include "AutoHost.h"
 #include <sys/wait.h>
 #include <errno.h>
-#include <iconv.h>
 
 enum GameStatus {Setting, PreLobby, Lobby, Load, Run, End, Failed};
-struct TimedMsg{time_t Stamp; char * Msg; ~TimedMsg(){if(Msg != NULL) delete Msg;}};
+struct TimedMsg{time_t Stamp; char * Msg; Game * SendTo; ~TimedMsg(){if(Msg != NULL) delete Msg;}};
 
 class Game
 {
@@ -25,7 +24,6 @@ class Game
 		int pipe_out, pipe_err; //from current process view. 
 		StreamReader *sr;
 		pid_t pid;
-		std::vector <TimedMsg *> MsgQueue;
 		struct{
 			bool SignOn;
 			bool League;
@@ -41,22 +39,15 @@ class Game
 		const char * OutPrefix;
 		GameStatus Status;
 		unsigned int ExecTrials;
-		pthread_t msgtid;
-		pthread_cond_t msgcond;
-		pthread_mutex_t msgmutex;
-		bool use_conds;
 		bool cleanup;
 		void Start(const char *);
 		bool Fail();
 		void Control();
-		void MsgTimer();
-		static void * MsgThreadWrapper(void *);
 		AutoHost * Parent;
 	public:
 		Game(AutoHost *);
 		void Start();
 		bool SendMsg(const char *, ...);
-		void SendMsg(int, const char *, ...);
 		bool SendMsg(const std::string);
 		void Exit(bool);
 		void AwaitEnd();
@@ -71,6 +62,17 @@ class Game
 		const char * GetPrefix() const{return OutPrefix;}
 		const char * GetScen() const {return Settings.Scen;}
 		GameStatus GetStatus() const {return Status;}
+		void SendMsg(int, const char *, ...);
+	private:
+		static pthread_t msgtid;
+		static pthread_cond_t msgcond;
+		static pthread_mutex_t msgmutex;
+		static std::vector <TimedMsg *> MsgQueue;
+		static bool msg_ready;
+		static void * MsgTimer(void *);
+	public:
+		static void Init();
+		static void Deinit();
 };
 
 #endif
