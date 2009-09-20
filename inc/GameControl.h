@@ -24,6 +24,7 @@ class Game
 		int pipe_out, pipe_err; //from current process view. 
 		StreamReader *sr;
 		pid_t pid;
+		pthread_t worker;
 		struct{
 			bool SignOn;
 			bool League;
@@ -49,7 +50,7 @@ class Game
 		void Start();
 		bool SendMsg(const char *, ...);
 		bool SendMsg(const std::string);
-		void Exit(bool);
+		void Exit(bool = true, bool = true);
 		void AwaitEnd();
 		~Game();
 		GameStatus GetStatus(){return Status;}
@@ -66,6 +67,7 @@ class Game
 	private:
 		static pthread_t msgtid;
 		static pthread_cond_t msgcond;
+		static pthread_mutex_t foomutex; // I don't even know, why it is there.
 		static pthread_mutex_t msgmutex;
 		static std::vector <TimedMsg *> MsgQueue;
 		static bool msg_ready;

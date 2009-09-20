@@ -49,7 +49,8 @@ void StreamControl::Work(){
 				sel->GetGame()->SendMsg(cmd.c_str(), NULL);
 			}
 		}
-	} //sr is invalid after that.
+	} 
+	delete sr;
 	sr = NULL;
 	delete this;
 }

@@ -27,29 +27,30 @@ class StreamReader{
 		bool ReadLine(std::string *line){return(ReadLine(line, 10));}
 		bool ReadLine(std::string *line, const char delim){
 			readthread = pthread_self();
-			*line="";
+			std::stringstream ss;
 			do{
 				//std::cout << reinterpret_cast<int>(buffadr) << " " << reinterpret_cast<int>(buff) << " " << rv << std::endl;
 				if(buffadr+rv > buff){ //I left things behind, last time.
 					buffadr2=buff;
 					while(*buff and *buff!=delim) buff++;
-					if(*buff==delim){ //This is the case, when there was found a completed line.
+					if(*buff==delim){ //This is the case, when there was a completed line found.
 						*buff=0;
 						buff++;
-						*line += buffadr2;
+						ss << buffadr2;
 						break;
 					}
-					*line += buffadr2;
+					ss << buffadr2;
 				}
 				buff = buffadr;
 				if((rv = read(fd, buff, MAXCHARS-1)) <= 0) {
 					close(fd);
-					delete this; //This happens, when fd has EoF.
+					*line = ss.str();
 					return false;
 				}
 				buff = buffadr;
 				*(buff+rv)=0;
 			} while(*buff!=0);
+			*line = ss.str();
 			return true;
 		}
 };

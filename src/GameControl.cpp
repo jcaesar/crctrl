@@ -1,4 +1,11 @@
 #include "GameControl.h"
+pthread_t Game::msgtid;
+pthread_cond_t Game::msgcond;
+pthread_mutex_t Game::foomutex;
+pthread_mutex_t Game::msgmutex;
+std::vector <TimedMsg *> Game::MsgQueue;
+bool Game::msg_ready;
+
 
 Game::Game(AutoHost * parent) : //FIXME: Better use reference
 	OutPrefix(parent->GetPrefix()),
@@ -8,6 +15,7 @@ Game::Game(AutoHost * parent) : //FIXME: Better use reference
 	pid=NULL;
 	Settings.Scen = NULL;
 	Settings.PW = NULL;
+	worker = NULL;
 	ExecTrials=0;
 	//Standard Settings:
 	Settings.Ports.TCP=GetConfig()->Ports.TCP;
@@ -21,7 +29,8 @@ Game::Game(AutoHost * parent) : //FIXME: Better use reference
 
 void Game::Init() {
 	if(msg_ready) return;
-	pthread_mutex_init(&msgmutex, NULL); //Deleted in MsgQueue
+	pthread_mutex_init(&foomutex, NULL); //Deleted in MsgQueue
+	pthread_mutex_init(&msgmutex, NULL);
 	pthread_cond_init(&msgcond, NULL);   // -"-
 	if(msgtid == 0) pthread_create(&msgtid, NULL, &Game::MsgTimer, NULL);
 	msg_ready = true;
@@ -98,6 +107,7 @@ void Game::Start(const char * args){
 	int fderr[2];
 	int fdtmp[2];
 	pid_t child;
+	worker = pthread_self();
 	Status=PreLobby;
 	if ( (pipe(fd1) < 0) || (pipe(fd2) < 0) || (pipe(fderr) < 0) || (pipe(fdtmp) < 0) ){
 		std::cerr << "Error opening Pipes." << std::endl;
@@ -136,8 +146,8 @@ void Game::Start(const char * args){
 			close(fd2[1]);
 			close(fderr[1]);
 		}
-		char pidchr [11];
-		sprintf(pidchr, "%d", child);
+		char pidchr [12];
+		sprintf(pidchr, "%d\n", child);
 		write(fdtmp[1], pidchr, strlen(pidchr));
 		close(fdtmp[1]);
 		raise(SIGKILL);
@@ -146,13 +156,13 @@ void Game::Start(const char * args){
 	waitpid(child, NULL, 0);
 	StreamReader pidread (fdtmp[0]);
 	std::string pids;
-	pidread.ReadLine(&pids);
-	pid = atoi(pids.c_str());
+	if(pidread.ReadLine(&pids)) pid = atoi(pids.c_str());
+	else pid = 0;
 	close(fdtmp[0]);
 	close(fd1[0]);
 	close(fd2[1]);
 	close(fderr[1]);
-	sr=new StreamReader(fd2[0]);
+	sr=new StreamReader(fd2[0]); //deleted in Game::Control()
 	pipe_out=fd1[1];
 	pipe_err=fderr[0];
 	if(!msg_ready) Init();
@@ -289,12 +299,19 @@ void Game::Control(){
 			}
 		}
 	}
+	delete sr;
 	sr = NULL;
 	if(Status==PreLobby) Fail(); return;
 	GetOut()->Put(Parent, OutPrefix, " Clonk Rage terminated.", NULL);
 }
 
-void Game::Exit(bool soft = true){
+void Game::Exit(bool soft /*= true*/, bool wait /*= true*/){
+	pthread_mutex_lock(&msgmutex);
+	int i=MsgQueue.size(); 
+	while(i-->0)
+		if(MsgQueue[i]->SendTo == this)
+			delete MsgQueue[i];
+	pthread_mutex_unlock(&msgmutex);
 	if(soft){ 
 		if(pipe_out != 0) {
 			int temp_pipe = pipe_out;
@@ -303,6 +320,10 @@ void Game::Exit(bool soft = true){
 			//I just hope, that CR closes by saying this. If it does not, I will have problems...
 		}
 	} else if(pid > 0) kill(pid, SIGKILL);
+	if(wait){
+		waitpid(pid, NULL, 0);
+		pthread_join(worker, NULL);
+	}
 }
 
 Game::~Game(){
@@ -313,8 +334,6 @@ Game::~Game(){
 	if(Settings.Scen) delete [] Settings.Scen;
 	if(Settings.PW) delete [] Settings.PW;
 	if(msgtid) {pthread_cancel(msgtid); msgtid=NULL;}
-	pthread_cond_destroy(&msgcond);
-	pthread_mutex_destroy(&msgmutex);
 }
 
 void Game::Deinit(){
@@ -323,6 +342,7 @@ void Game::Deinit(){
 	pthread_cond_signal(&msgcond);
 	if(msgtid) {pthread_join(msgtid, NULL); msgtid=NULL;}
 	pthread_cond_destroy(&msgcond);
+	pthread_mutex_destroy(&foomutex);
 	pthread_mutex_destroy(&msgmutex);
 }
 
@@ -384,17 +404,18 @@ bool Game::SendMsg(const std::string msg){
 }
 
 void * Game::MsgTimer(void * foo){
-	pthread_mutex_lock(&msgmutex); //Whyever.
+	pthread_mutex_lock(&foomutex); //Whyever.
 	time_t nextevent = 0;
 	while(true){
 		if(MsgQueue.size() > 0) {
 			timespec ts;
 			ts.tv_sec = nextevent; 
-			pthread_cond_timedwait(&msgcond, &msgmutex, &ts);
-		} else pthread_cond_wait(&msgcond, &msgmutex);
+			pthread_cond_timedwait(&msgcond, &foomutex, &ts);
+		} else pthread_cond_wait(&msgcond, &foomutex);
 		if(!msg_ready) 
 			break;
 		nextevent=0;
+		pthread_mutex_lock(&msgmutex);
 		int i=MsgQueue.size(); while(i-->0){
 			if(MsgQueue[i]->Stamp <= time(NULL)){
 				(MsgQueue[i]->SendTo)->SendMsg(MsgQueue[i]->Msg, NULL);
@@ -404,8 +425,9 @@ void * Game::MsgTimer(void * foo){
 				if(nextevent == 0 || MsgQueue[i]->Stamp <= nextevent) nextevent = MsgQueue[i]->Stamp;
 			}
 		}
+		pthread_mutex_unlock(&msgmutex);
 	}
-	pthread_mutex_unlock(&msgmutex);
+	pthread_mutex_unlock(&foomutex);
 	return NULL;
 }
 
