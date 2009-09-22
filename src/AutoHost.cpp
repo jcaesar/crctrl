@@ -32,18 +32,23 @@ AutoHost::~AutoHost(){
 
 void AutoHost::Work(){
 	GetOut()->Put(NULL, OutPrefix, " New AutoHost working!", NULL);
+	const ScenarioSet * scn; const ScenarioSet * lastscn; bool del, delnow;
 	while(work){
-		CurrentGame = new Game(this);
 		pthread_mutex_lock(&mutex);
-		if(ScenQueue.empty()) CurrentGame -> SetScen(GetConfig()->GetScen());
-		else {
-			const ScenarioSet * scn;
+		lastscn = scn;
+		delnow = del;
+		if(ScenQueue.empty()) {
+			scn = GetConfig()->GetScen();
+			del = false;
+		} else {
 			try {scn = ScenQueue.at(0);} //Vector sux, dunno why.
 			catch (...) {continue;}
-			CurrentGame -> SetScen(scn);
-			delete scn;
 			ScenQueue.erase(ScenQueue.begin());
 		}
+		if(Fails && scn == lastscn) continue;
+		if(delnow) delete lastscn;
+		CurrentGame = new Game(this);
+		CurrentGame -> SetScen(scn);
 		pthread_mutex_unlock(&mutex);
 		CurrentGame -> Start(); //This blocks, until the game is over.
 		if(!work) break;

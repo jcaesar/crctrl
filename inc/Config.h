@@ -103,6 +103,10 @@ class ScenarioSet {
 			if(index < 0 || index >= NameCount) return NULL;
 			return *(ExtraNames + index);
 		}
+		const bool operator==(const ScenarioSet & o){ //Names & PW & HostChance ignored.
+			if(ScenPath && o.ScenPath && !strcmp(ScenPath, o.ScenPath)) return true;
+			else return false;
+		}
 };
 
 struct BanSet {
