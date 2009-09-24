@@ -68,9 +68,9 @@ bool Game::SetScen(const ScenarioSet * scen, bool changeleague /*==true*/){
 
 void Game::Start(){
 	//std::string cmd;
-	StringCollector cmd("\"");
-	if(Settings.SignOn) cmd += "\"/signup\"";
-	else cmd += "\"/nosignup\"";
+	StringCollector cmd("\"\"/fullscreen\"");
+	if(Settings.SignOn) cmd += " \"/signup\"";
+	else cmd += " \"/nosignup\"";
 	if(Settings.League)cmd += " \"/league\"";
 	else cmd += " \"/noleague\"";
 	if(Settings.Record) cmd += " \"/record\"";
@@ -248,7 +248,7 @@ void Game::Control(){
 			} else if(regex_match(line, regex_ret, rx::cl_join)){
 				if(!GetConfig()->GetBan(regex_ret[1].str().c_str())){	
 					SendMsg("Hi! Viel Spass beim Spielen, ", regex_ret[1].str().data(), ".\n", NULL);
-					SendMsg(2, "Mehr ueber diesen Server erfaehrst du unter cserv.game-host.org\nJeder kann bestimmen, was gehostet wird. Gib %hilf ein!\n", NULL);
+					SendMsg(2, "Mehr ueber diesen Server erfaehrst du unter cserv.game-server.cc\nJeder kann bestimmen, was gehostet wird. Gib %hilf ein!\n", NULL);
 				}
 			} else if(regex_match(line, regex_ret, rx::cl_conn)){
 				if(const char * reason = GetConfig()->GetBan(regex_ret[1].str().c_str())){
