@@ -107,6 +107,7 @@ void Game::Start(const char * args){
 	int fderr[2];
 	int fdtmp[2];
 	pid_t child;
+	if(cleanup) return; //Last check...
 	worker = pthread_self();
 	Status=PreLobby;
 	if ( (pipe(fd1) < 0) || (pipe(fd2) < 0) || (pipe(fderr) < 0) || (pipe(fdtmp) < 0) ){
@@ -301,17 +302,12 @@ void Game::Control(){
 	}
 	delete sr;
 	sr = NULL;
-	if(Status==PreLobby) Fail(); return;
-	GetOut()->Put(Parent, OutPrefix, " Clonk Rage terminated.", NULL);
+	if(Status==PreLobby) Fail(); 
+	return;
 }
 
 void Game::Exit(bool soft /*= true*/, bool wait /*= true*/){
-	pthread_mutex_lock(&msgmutex);
-	int i=MsgQueue.size(); 
-	while(i-->0)
-		if(MsgQueue[i]->SendTo == this)
-			delete MsgQueue[i];
-	pthread_mutex_unlock(&msgmutex);
+	cleanup = true;
 	if(soft){ 
 		if(pipe_out != 0) {
 			int temp_pipe = pipe_out;
@@ -320,6 +316,14 @@ void Game::Exit(bool soft /*= true*/, bool wait /*= true*/){
 			//I just hope, that CR closes by saying this. If it does not, I will have problems...
 		}
 	} else if(pid > 0) kill(pid, SIGKILL);
+	pthread_mutex_lock(&msgmutex);
+	int i=MsgQueue.size(); 
+	while(i-->0)
+		if(MsgQueue[i]->SendTo == this){
+			delete MsgQueue[i];
+			MsgQueue.erase(MsgQueue.begin()+i);
+		}
+	pthread_mutex_unlock(&msgmutex);
 	if(wait){
 		waitpid(pid, NULL, 0);
 		pthread_join(worker, NULL);
@@ -327,7 +331,6 @@ void Game::Exit(bool soft /*= true*/, bool wait /*= true*/){
 }
 
 Game::~Game(){
-	cleanup = true;
 	Exit();
 	if(pid > 0) kill(pid, SIGKILL);
 	waitpid(pid, NULL, WNOHANG);
@@ -354,6 +357,7 @@ bool Game::Fail(){
 		return true;
 	} else {
 		sleep(5);
+		if(cleanup) return true;
 		Start();
 		return false;
 	}
@@ -375,6 +379,7 @@ bool Game::SendMsg(const char * first, ...){
 }
 
 void Game::SendMsg(int secs, const char * first, ...){
+	if(cleanup) return;
 	int stamp = time(NULL) + secs; //Conserv
 	va_list vl;
 	va_start(vl, first);
@@ -390,8 +395,8 @@ void Game::SendMsg(int secs, const char * first, ...){
 		TimedMsg * tmsg = new TimedMsg; //Deleted in Game::MsgTimer
 		tmsg->Stamp = stamp;
 		tmsg->Msg = new char[msg.GetLength()+1]; //Deleted in D'tor of struct TimedMsg
-		tmsg->SendTo = this;
 		strcpy(tmsg->Msg,msg.GetBlock());
+		tmsg->SendTo = this;
 		MsgQueue.push_back(tmsg); //No need to lock here.
 		if(msg_ready) pthread_cond_signal(&msgcond); //Update
 	} else {

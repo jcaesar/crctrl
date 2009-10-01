@@ -21,8 +21,10 @@ void AutoHost::SoftEnd(bool wait /*= true*/){
 
 AutoHost::~AutoHost(){
 	work = false;
+	pthread_mutex_lock(&mutex);
 	delete CurrentGame;
 	CurrentGame = NULL;
+	pthread_mutex_unlock(&mutex);
 	if(pthread_self() != tid) pthread_join(tid, NULL); //And my own thread will end when all that is done. 
 	pthread_mutex_destroy(&mutex);
 	AutoHosts.Remove(this);
@@ -33,8 +35,8 @@ AutoHost::~AutoHost(){
 void AutoHost::Work(){
 	GetOut()->Put(NULL, OutPrefix, " New AutoHost working!", NULL);
 	const ScenarioSet * scn; const ScenarioSet * lastscn; bool del, delnow;
+	pthread_mutex_lock(&mutex);
 	while(work){
-		pthread_mutex_lock(&mutex);
 		lastscn = scn;
 		delnow = del;
 		if(ScenQueue.empty()) {
@@ -50,8 +52,8 @@ void AutoHost::Work(){
 		CurrentGame = new Game(this);
 		CurrentGame -> SetScen(scn);
 		pthread_mutex_unlock(&mutex);
-		CurrentGame -> Start(); //This blocks, until the game is over.
-		if(!work) break;
+		CurrentGame -> Start(); //This blocks, until the game is over.´
+		if(!work || pthread_mutex_trylock(&mutex) == EBUSY) break;
 		if(CurrentGame -> GetStatus() == Failed) {
 			Fails++;
 			if(Fails >= GetConfig()->MaxExecTrials) {
@@ -62,6 +64,7 @@ void AutoHost::Work(){
 		} else Fails = 0;
 		delete CurrentGame;
 	}
+	pthread_mutex_unlock(&mutex);  //"[EPERM] - The current thread does not hold a lock on mutex." (No need to handle.)
 }
 
 Game * AutoHost::GetGame(){
