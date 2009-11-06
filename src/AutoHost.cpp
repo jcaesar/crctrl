@@ -20,14 +20,14 @@ void AutoHost::SoftEnd(bool wait /*= true*/){
 }
 
 AutoHost::~AutoHost(){
+	AutoHosts.Remove(this);
 	work = false;
-	pthread_mutex_lock(&mutex);
+	pthread_mutex_lock(&mutex); //onkel phlox hat gesagt: try{...}catch(DeadLockException& e){cout << "so einfach ist das" << endl; e.unlock();}
 	delete CurrentGame;
 	CurrentGame = NULL;
 	pthread_mutex_unlock(&mutex);
 	if(pthread_self() != tid) pthread_join(tid, NULL); //And my own thread will end when all that is done. 
 	pthread_mutex_destroy(&mutex);
-	AutoHosts.Remove(this);
 	GetOut()->Put(NULL, OutPrefix, " Terminated.", NULL);
 	delete OutPrefix;
 }

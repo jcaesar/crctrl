@@ -16,6 +16,7 @@ Game::Game(AutoHost * parent) : //FIXME: Better use reference
 	Settings.Scen = NULL;
 	Settings.PW = NULL;
 	worker = NULL;
+	pipe_out = NULL; pipe_err = NULL;
 	ExecTrials=0;
 	//Standard Settings:
 	Settings.Ports.TCP=GetConfig()->Ports.TCP;
@@ -104,13 +105,13 @@ void Game::Start(){
 void Game::Start(const char * args){
 	int fd1[2];
 	int fd2[2];
-	int fderr[2];
+	//int fderr[2];
 	int fdtmp[2];
 	pid_t child;
 	if(cleanup) return; //Last check...
 	worker = pthread_self();
 	Status=PreLobby;
-	if ( (pipe(fd1) < 0) || (pipe(fd2) < 0) || (pipe(fderr) < 0) || (pipe(fdtmp) < 0) ){
+	if ( (pipe(fd1) < 0) || (pipe(fd2) < 0) /*|| (pipe(fderr) < 0)*/ || (pipe(fdtmp) < 0) ){
 		std::cerr << "Error opening Pipes." << std::endl;
 		Fail();
 		return;
@@ -124,7 +125,7 @@ void Game::Start(const char * args){
 		if(child == 0){
 			close(fd1[1]);
 			close(fd2[0]);
-			close(fderr[0]);
+			//close(fderr[0]);
 			if (fd1[0] != STDIN_FILENO){
 				if (dup2(fd1[0], STDIN_FILENO) != STDIN_FILENO) std::cout << "Error with stdin" << std::endl;
 				close(fd1[0]);
@@ -133,10 +134,10 @@ void Game::Start(const char * args){
 				if (dup2(fd2[1], STDOUT_FILENO) != STDOUT_FILENO) std::cout << "Error with stdout" << std::endl;
 				close(fd2[1]);
 			}
-			if (fderr[1] != STDERR_FILENO){
+			/*if (fderr[1] != STDERR_FILENO){
 				if (dup2(fderr[1], STDERR_FILENO) != STDERR_FILENO) std::cout << "Error with stderr" << std::endl;
 				close(fderr[1]);
-			}
+			}*/
 			char * fullpath = new char[strlen(GetConfig()->Path) + 7];
 			strcpy(fullpath, GetConfig()->Path);
 			strcpy(fullpath+strlen(GetConfig()->Path), "/clonk");
@@ -145,7 +146,7 @@ void Game::Start(const char * args){
 			std::cout << "Could not Start. Error: " << errno << std::endl; //Give parent process a notice.
 			close(fd1[0]);
 			close(fd2[1]);
-			close(fderr[1]);
+			//close(fderr[1]);
 		}
 		char pidchr [12];
 		sprintf(pidchr, "%d\n", child);
@@ -162,10 +163,12 @@ void Game::Start(const char * args){
 	close(fdtmp[0]);
 	close(fd1[0]);
 	close(fd2[1]);
-	close(fderr[1]);
+	//close(fderr[1]);
 	sr=new StreamReader(fd2[0]); //deleted in Game::Control()
+	if(pipe_out) close(pipe_out);
 	pipe_out=fd1[1];
-	pipe_err=fderr[0];
+	//if(pipe_err) close(pipe_err);
+	//pipe_err=fderr[0];
 	if(!msg_ready) Init();
 	Control();
 }
