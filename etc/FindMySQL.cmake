@@ -11,6 +11,7 @@ find_path(MySQL_INCLUDE_DIR mysql.h
   /opt/local/include/mysql
   /usr/local/include/mysql
   /usr/include/mysql
+  "%ProgramFiles(x86)%/MySQL/MySQL Server 5.0/"
 )
 
 set(MySQL_NAMES mysql)
