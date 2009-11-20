@@ -1,9 +1,10 @@
 #ifndef ControlH
 #define ControlH
 
-#include "AutoHost.h"
-#include "Config.h"
-#include <pthread.h>
+#include <sys/types.h>
+#include <vector>
+class StreamReader; // #include "helpers/StreamReader.hpp"
+class AutoHost; // #include "AutoHost.h"
 
 class StreamControl{
 	private:

@@ -1,6 +1,13 @@
 
 #include "Config.h"
 
+#include <signal.h>
+#include <math.h>
+#include <string>
+#include <boost/regex.hpp>
+#include <mysql++.h>
+#include "helpers/StringFunctions.hpp"
+
 static Setting Config;
 
 Setting * GetConfig(){

@@ -1,4 +1,19 @@
+
 #include "GameControl.h"
+
+#include <signal.h>
+#include <stdarg.h>
+#include <sys/wait.h>
+#include <errno.h>
+#include <iostream>
+#include <boost/regex.hpp>
+#include "Lib.hpp"
+#include "helpers/StringCollector.hpp"
+#include "helpers/StreamReader.hpp"
+#include "helpers/StreamReader.hpp"
+#include "Control.h"
+#include "AutoHost.h"
+
 pthread_t Game::msgtid;
 pthread_cond_t Game::msgcond;
 pthread_mutex_t Game::foomutex;

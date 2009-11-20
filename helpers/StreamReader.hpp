@@ -1,6 +1,9 @@
 #ifndef StreamReaderHpp
 #define StreamReaderHpp
 
+#include <sstream>
+#include <string>
+
 #ifndef MAXCHARS
 	#define MAXCHARS 128
 #endif

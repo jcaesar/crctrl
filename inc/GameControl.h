@@ -2,18 +2,12 @@ class Game;
 #ifndef GameControlH
 #define GameControlH
 
-#include <boost/regex.hpp>
-#include <signal.h>
 #include <pthread.h>
-#include "Lib.hpp"
-#include <stdarg.h>
-#include "helpers/StringCollector.hpp"
-#include "Config.h"
-#include "helpers/StreamReader.hpp"
-#include "Control.h"
-#include "AutoHost.h"
-#include <sys/wait.h>
-#include <errno.h>
+#include <vector>
+#include <string>
+class StreamReader; //#include "helpers/StreamReader.cpp"
+class AutoHost; //#include "AutoHost.h"
+#include "Config.h" //FIXME: Try not to include it here...
 
 enum GameStatus {Setting, PreLobby, Lobby, Load, Run, End, Failed};
 struct TimedMsg{time_t Stamp; char * Msg; Game * SendTo; ~TimedMsg(){if(Msg != NULL) delete Msg;}};

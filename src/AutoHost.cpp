@@ -1,6 +1,11 @@
 
 #include "AutoHost.h"
 
+#include <errno.h>
+#include "GameControl.h"
+#include "Config.h"
+#include "Control.h"
+
 static AutoHostList AutoHosts;
 
 AutoHostList * GetAutoHosts(){

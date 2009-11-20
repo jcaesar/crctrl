@@ -9,14 +9,15 @@ class StringCollector{
 		bool delete_data;
 		int length;
 	public:
-		StringCollector(const char * string = NULL) : data(string), next(NULL), string_complete(0), delete_data(false), length(-1) {} //When data ist NULL, we've got a Problem. Fixme.
+		StringCollector(const char * string = NULL) : data(string), next(NULL), string_complete(0), delete_data(false), length(-1) {}
 		~StringCollector() {
 			if(next != NULL) delete next;
 			if(string_complete || delete_data) delete [] data;
 		}
 		int GetLength(bool renew = false){
 			if(length == -1 || renew) {
-				length = strlen(data);
+				length = 0;
+				if(data) length += strlen(data);
 				if(next) length += next->GetLength();
 			}
 			return length;
@@ -28,8 +29,10 @@ class StringCollector{
 				char * jump; jump = temp;
 				StringCollector * itr; itr=this;
 				while(itr){
-					strcpy(jump, itr->data);
-					jump += strlen(itr->data);
+					if(itr->data) {
+						strcpy(jump, itr->data);
+						jump += strlen(itr->data);
+					}
 					itr = itr->next;
 				}
 				data = temp;

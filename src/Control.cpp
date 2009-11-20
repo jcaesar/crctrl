@@ -1,6 +1,19 @@
 
 #include "Control.h"
 
+#include <errno.h>
+#include <stdarg.h>
+#include <signal.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <pthread.h>
+#include "helpers/StringFunctions.hpp"
+#include "helpers/StringCollector.hpp"
+#include "helpers/StreamReader.hpp"
+#include "AutoHost.h"
+#include "Config.h"
+#include "GameControl.h"
+
 OutprintControl Out;
 
 OutprintControl * GetOut(){
@@ -32,6 +45,21 @@ void StreamControl::Work(){
 				else sel->SoftEnd(false);
 			} else {
 				Out.Put(this, "No Host selected.", NULL);
+			}
+		} else if(!cmd.compare("%fork")) {
+			pid_t pid = fork();
+			if(pid == 0) {
+				close(0); open("/dev/null", O_RDONLY);
+				close(1); open("/dev/null", O_WRONLY);
+				close(2); open("/dev/null", O_WRONLY);
+				setsid();
+			} else {
+				if(pid < 0) Out.Put(NULL, "Error while forking into background: ", strerror(errno), NULL);
+				else {
+					char pids [11]; sprintf(pids,"%d",pid);
+					Out.Put(this, "Forked. New Process ID: ", pids, NULL);
+				}
+				raise(SIGKILL);
 			}
 		} else if(!cmd.compare("%reload")) {
 			GetConfig()->Reload();

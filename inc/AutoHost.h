@@ -2,9 +2,11 @@ class AutoHost;
 #ifndef AutoHostH
 #define AutoHostH
 
-#include "GameControl.h"
-#include "Config.h"
 #include <pthread.h>
+#include <vector>
+class Game; //#include "GameControl.h"
+class ScenarioSet; //#include "Config.h"
+
 
 class AutoHost{
 	private:

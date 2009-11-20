@@ -1,6 +1,8 @@
 #ifndef ConfigH
 #define ConfigH
 
+#include <boost/regex.hpp>
+
 #ifndef DEFAULT_SQL_NAME
 	#define DEFAULT_SQL_NAME "crctrl"
 #endif
@@ -10,13 +12,6 @@
 #ifndef DEFAULT_SQL_DB
 	#define DEFAULT_SQL_DB "crctrl"
 #endif
-
-#include <boost/regex.hpp>
-#include <mysql++.h>
-#include <string>
-#include <signal.h>
-#include "helpers/StringFunctions.hpp"
-#include <math.h>
 
 class ScenarioSet;
 class ScenarioSet {
