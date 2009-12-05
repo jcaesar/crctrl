@@ -1,0 +1,27 @@
+#ifndef ExternalAppH
+#define ExternalAppH
+
+#include "Stream.h"
+
+class Process : public Stream {
+	private:
+		enum { PreRun, Active, Stopped } Status;
+		char * path;
+		char * args;
+		#if defined UNIX
+			pid_t pid;
+		#elif defined WIN32
+			HANDLE hChildProcess;
+		#endif
+	public:
+		Process();
+		~Process();
+		bool SetArguments(const char * path, const char * args);
+		bool Start();
+		bool Kill(bool brutal = false);
+		bool Wait(bool block = true);
+		void ClosePipeTo();
+		bool IsRunning() {return Status==Active;}
+};
+
+#endif

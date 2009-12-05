@@ -3,32 +3,33 @@
 
 #include <sys/types.h>
 #include <vector>
-class StreamReader; // #include "helpers/StreamReader.hpp"
+#include <pthread.h>
+class Stream; // #include "helpers/Stream.h"
 class AutoHost; // #include "AutoHost.h"
 
-class StreamControl{
+class UserControl{
 	private:
 		void Work();
 		static void * ThreadWrapper(void *);
-		const int fd_out;
-		StreamReader * sr;
+		Stream * conn;
 		AutoHost * sel;
 		pthread_t tid;
 		void PrintStatus(AutoHost * = NULL);
 	public:
-		StreamControl(int, int);
+		UserControl(Stream *);
+		~UserControl();
 		bool Write(void *, const char *);
 };
 
 class OutprintControl{
 	private:
-		std::vector <StreamControl *> ctrls;
+		std::vector <UserControl *> ctrls;
 		pthread_mutex_t mutex;
 	public:
 		OutprintControl();
 		~OutprintControl();
-		void Add(StreamControl * ctrl);
-		bool Remove(StreamControl * ctrl);
+		void Add(UserControl * ctrl);
+		bool Remove(UserControl * ctrl);
 		void Put(void *, const char *, ...);
 };
 

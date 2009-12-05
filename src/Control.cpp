@@ -1,15 +1,10 @@
 
 #include "Control.h"
 
-#include <errno.h>
-#include <stdarg.h>
-#include <signal.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <pthread.h>
-#include "helpers/StringFunctions.hpp"
+#include "helpers/StringFunctions.h"
 #include "helpers/StringCollector.hpp"
-#include "helpers/StreamReader.hpp"
+#include "helpers/AppManagement.h"
+#include "helpers/Stream.h"
 #include "AutoHost.h"
 #include "Config.h"
 #include "GameControl.h"
@@ -20,25 +15,29 @@ OutprintControl * GetOut(){
 	return &Out;
 }
 
-StreamControl::StreamControl(int fdin, int fdout):
-	fd_out(fdout),
-	sr(new StreamReader(fdin))
+UserControl::UserControl(Stream * io) :
+	conn(io),
+	sel(NULL)
 {
 	Out.Add(this);
-	pthread_create(&tid, NULL, &StreamControl::ThreadWrapper, this);
-	sel=NULL;
-	if(fdin == STDIN_FILENO && fdout == STDOUT_FILENO) sleep(1); //Hacky, but the AutoHosts will have a status then.
+	pthread_create(&tid, NULL, &UserControl::ThreadWrapper, this);
+	Halt(0.2); //Hacky, but the AutoHosts will have a status at startup.
 	PrintStatus();
 }
 
-void StreamControl::Work(){
+UserControl::~UserControl() {
+	Write(this, "Your connection got Terminated (most probably due to a shutdown).");
+	delete conn;
+}
+
+void UserControl::Work(){
 	std::string cmd;
-	while(sr->ReadLine(&cmd)){
+	while(conn->ReadLine(&cmd)){
 		if(!cmd.compare("%auto")) {
 			new AutoHost();
 		} else if(!cmd.compare("%end")) {
 			GetAutoHosts()->DelAll();
-			raise(SIGINT);
+			exit(0);
 		} else if(startswith(&cmd,"%stop")) {
 			if(GetAutoHosts()->Exists(sel) && sel->GetGame()){
 				if(cmd.compare("%stop forced")) delete sel;
@@ -47,20 +46,7 @@ void StreamControl::Work(){
 				Out.Put(this, "No Host selected.", NULL);
 			}
 		} else if(!cmd.compare("%fork")) {
-			pid_t pid = fork();
-			if(pid == 0) {
-				close(0); open("/dev/null", O_RDONLY);
-				close(1); open("/dev/null", O_WRONLY);
-				close(2); open("/dev/null", O_WRONLY);
-				setsid();
-			} else {
-				if(pid < 0) Out.Put(NULL, "Error while forking into background: ", strerror(errno), NULL);
-				else {
-					char pids [11]; sprintf(pids,"%d",pid);
-					Out.Put(this, "Forked. New Process ID: ", pids, NULL);
-				}
-				raise(SIGKILL);
-			}
+			Background();
 		} else if(!cmd.compare("%reload")) {
 			GetConfig()->Reload();
 		} else if(startswith(&cmd,"%sel ")) {
@@ -77,13 +63,11 @@ void StreamControl::Work(){
 				sel->GetGame()->SendMsg(cmd.c_str(), NULL);
 			}
 		}
-	} 
-	delete sr;
-	sr = NULL;
+	}
 	delete this;
 }
 
-void StreamControl::PrintStatus(AutoHost * stat /*= NULL*/){
+void UserControl::PrintStatus(AutoHost * stat /*= NULL*/){
 	if(GetAutoHosts()->Exists(stat)) Out.Put(this, stat->GetPrefix(), " ", stat->GetGame()->GetScen(), NULL);
 	else{
 		int i=0;
@@ -91,17 +75,15 @@ void StreamControl::PrintStatus(AutoHost * stat /*= NULL*/){
 	}
 }
 
-bool StreamControl::Write(void * context, const char * msg){
-	if(context == sel || context == this || context == 0){
-		int len=strlen(msg);
-		if(len != write(fd_out, msg, len)) return false;
-		if(msg[--len] != '\n') if(write(fd_out, "\n", 1) != 1) return false;
-		return true;
-	} else return false;
+bool UserControl::Write(void * context, const char * msg){
+	if(context == sel || context == this || context == 0)
+		return conn->Write(msg, NULL);
+	else 
+		return false;
 }
 
-void * StreamControl::ThreadWrapper(void *p) { //I wonder why I don't need a static here. (but in the .h) Or better: I MAY NOT use it...
-	static_cast<StreamControl*>(p)->Work(); 
+void * UserControl::ThreadWrapper(void *p) {
+	static_cast<UserControl*>(p)->Work(); 
 	return NULL;
 }
 
@@ -115,13 +97,13 @@ OutprintControl::~OutprintControl(){
 	pthread_mutex_destroy(&mutex);
 }
 
-void OutprintControl::Add(StreamControl * ctrl){
+void OutprintControl::Add(UserControl * ctrl){
 	pthread_mutex_lock(&mutex);
 	ctrls.push_back(ctrl);
 	pthread_mutex_unlock(&mutex);
 }
 
-bool OutprintControl::Remove(StreamControl * ctrl){
+bool OutprintControl::Remove(UserControl * ctrl){
 	pthread_mutex_lock(&mutex);
 	int i=ctrls.size();
 	while(i--){

@@ -6,7 +6,18 @@
 #include <string>
 #include <boost/regex.hpp>
 #include <mysql++.h>
-#include "helpers/StringFunctions.hpp"
+#include "helpers/AppManagement.h"
+#include "helpers/StringFunctions.h"
+
+#ifndef DEFAULT_SQL_NAME
+	#define DEFAULT_SQL_NAME "crctrl"
+#endif
+#ifndef DEFAULT_SQL_PW
+	#define DEFAULT_SQL_PW "" //Dangerous not to use a password
+#endif
+#ifndef DEFAULT_SQL_DB
+	#define DEFAULT_SQL_DB "crctrl"
+#endif
 
 static Setting Config;
 
@@ -202,14 +213,14 @@ const ScenarioSet * Setting::GetScen(){ //Do it by random.
 	if(ScenCount == 0) return NULL; //No Scen = Silly person.
 	if(ScenCount == 1) return *Scens;  //One Scen = Bla, that's not gonna segv anymore, so noone testing could be annoyed.
 	srand((unsigned)time(NULL) ^ rand()); 
-	double rnd=fmod(rand(), ChanceTotal*16) / 16;
+	double rnd=fmod((float)rand(), ChanceTotal*16) / 16;
 	ScenarioSet ** ScenInst = Scens;
 	while(rnd >= 0){
 		rnd -= (**ScenInst).GetChance();
 		ScenInst++;
 	}
 	if(ScenInst >= Scens + ScenCount) { //Hmm, what now? SigKill? Reload? Quit?
-		raise(SIGSEGV); //If it did not happen earlier.
+		PanicExit(); //raise(SIGSEGV); //If it did not happen earlier.
 	}
 	return (*(ScenInst-1));
 }

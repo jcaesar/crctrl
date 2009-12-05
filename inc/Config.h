@@ -1,17 +1,8 @@
 #ifndef ConfigH
 #define ConfigH
 
+#include <pthread.h>
 #include <boost/regex.hpp>
-
-#ifndef DEFAULT_SQL_NAME
-	#define DEFAULT_SQL_NAME "crctrl"
-#endif
-#ifndef DEFAULT_SQL_PW
-	#define DEFAULT_SQL_PW "sLZpTCMMHZmnvebA"
-#endif
-#ifndef DEFAULT_SQL_DB
-	#define DEFAULT_SQL_DB "crctrl"
-#endif
 
 class ScenarioSet;
 class ScenarioSet {

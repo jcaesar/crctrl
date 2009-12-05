@@ -5,7 +5,8 @@ class Game;
 #include <pthread.h>
 #include <vector>
 #include <string>
-class StreamReader; //#include "helpers/StreamReader.cpp"
+class StreamReader; //#include "helpers/Stream.h"
+class Process; //#include "helpers/ExternalApp.h"
 class AutoHost; //#include "AutoHost.h"
 #include "Config.h" //FIXME: Try not to include it here...
 
@@ -15,9 +16,7 @@ struct TimedMsg{time_t Stamp; char * Msg; Game * SendTo; ~TimedMsg(){if(Msg != N
 class Game
 {
 	private:
-		int pipe_out, pipe_err; //from current process view. 
-		StreamReader *sr;
-		pid_t pid;
+		Process * clonk;
 		pthread_t worker;
 		struct{
 			bool SignOn;

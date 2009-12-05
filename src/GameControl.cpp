@@ -1,16 +1,12 @@
 
 #include "GameControl.h"
 
-#include <signal.h>
-#include <stdarg.h>
-#include <sys/wait.h>
-#include <errno.h>
-#include <iostream>
 #include <boost/regex.hpp>
-#include "Lib.hpp"
 #include "helpers/StringCollector.hpp"
-#include "helpers/StreamReader.hpp"
-#include "helpers/StreamReader.hpp"
+#include "helpers/AppManagement.h"
+#include "helpers/Stream.h"
+#include "helpers/ExternalApp.h"
+#include "Lib.hpp"
 #include "Control.h"
 #include "AutoHost.h"
 
@@ -27,11 +23,9 @@ Game::Game(AutoHost * parent) : //FIXME: Better use reference
 	Parent(parent)
 {
 	cleanup=false;
-	pid=NULL;
 	Settings.Scen = NULL;
 	Settings.PW = NULL;
-	worker = NULL;
-	pipe_out = NULL; pipe_err = NULL;
+	clonk = NULL;
 	ExecTrials=0;
 	//Standard Settings:
 	Settings.Ports.TCP=GetConfig()->Ports.TCP;
@@ -48,9 +42,9 @@ void Game::Init() {
 	pthread_mutex_init(&foomutex, NULL); //Deleted in MsgQueue
 	pthread_mutex_init(&msgmutex, NULL);
 	pthread_cond_init(&msgcond, NULL);   // -"-
-	if(msgtid == 0) pthread_create(&msgtid, NULL, &Game::MsgTimer, NULL);
+	pthread_create(&msgtid, NULL, &Game::MsgTimer, NULL);
 	msg_ready = true;
-	msgtid=NULL;
+	//msgtid=NULL; FIXME: Understand, why that line was here...
 }
 
 bool Game::SetScen(const char * scen){
@@ -118,72 +112,15 @@ void Game::Start(){
 }
 
 void Game::Start(const char * args){
-	int fd1[2];
-	int fd2[2];
-	//int fderr[2];
-	int fdtmp[2];
-	pid_t child;
-	if(cleanup) return; //Last check...
 	worker = pthread_self();
-	Status=PreLobby;
-	if ( (pipe(fd1) < 0) || (pipe(fd2) < 0) /*|| (pipe(fderr) < 0)*/ || (pipe(fdtmp) < 0) ){
-		std::cerr << "Error opening Pipes." << std::endl;
-		Fail();
-		return;
-	}
-	child = fork();
-	if(child < 0) { std::cerr << "Error forking process." << std::endl; Fail(); return;}
-	if(child == 0){
-		close(fdtmp[0]);
-		child = fork();
-		if(child < 0) exit(1);
-		if(child == 0){
-			close(fd1[1]);
-			close(fd2[0]);
-			//close(fderr[0]);
-			if (fd1[0] != STDIN_FILENO){
-				if (dup2(fd1[0], STDIN_FILENO) != STDIN_FILENO) std::cout << "Error with stdin" << std::endl;
-				close(fd1[0]);
-			}
-			if (fd2[1] != STDOUT_FILENO){
-				if (dup2(fd2[1], STDOUT_FILENO) != STDOUT_FILENO) std::cout << "Error with stdout" << std::endl;
-				close(fd2[1]);
-			}
-			/*if (fderr[1] != STDERR_FILENO){
-				if (dup2(fderr[1], STDERR_FILENO) != STDERR_FILENO) std::cout << "Error with stderr" << std::endl;
-				close(fderr[1]);
-			}*/
-			char * fullpath = new char[strlen(GetConfig()->Path) + 7];
-			strcpy(fullpath, GetConfig()->Path);
-			strcpy(fullpath+strlen(GetConfig()->Path), "/clonk");
-			execl(fullpath, GetConfig()->Path, args, NULL);
-			//When execl does fine, it will never return.
-			std::cout << "Could not Start. Error: " << errno << std::endl; //Give parent process a notice.
-			close(fd1[0]);
-			close(fd2[1]);
-			//close(fderr[1]);
-		}
-		char pidchr [12];
-		sprintf(pidchr, "%d\n", child);
-		write(fdtmp[1], pidchr, strlen(pidchr));
-		close(fdtmp[1]);
-		raise(SIGKILL);
-	}
-	close(fdtmp[1]);
-	waitpid(child, NULL, 0);
-	StreamReader pidread (fdtmp[0]);
-	std::string pids;
-	if(pidread.ReadLine(&pids)) pid = atoi(pids.c_str());
-	else pid = 0;
-	close(fdtmp[0]);
-	close(fd1[0]);
-	close(fd2[1]);
-	//close(fderr[1]);
-	sr=new StreamReader(fd2[0]); //deleted in Game::Control()
-	if(pipe_out) close(pipe_out);
-	pipe_out=fd1[1];
-	//if(pipe_err) close(pipe_err);
-	//pipe_err=fderr[0];
+	if(clonk) delete clonk;
+	clonk = new Process();
+	char * fullpath = new char[strlen(GetConfig()->Path) + 7];
+	strcpy(fullpath, GetConfig()->Path);
+	strcpy(fullpath+strlen(GetConfig()->Path), "/clonk");
+	clonk -> SetArguments(fullpath, args);
+	delete [] fullpath;
+	if(!clonk -> Start()) Fail();
 	if(!msg_ready) Init();
 	Control();
 }
@@ -191,7 +128,7 @@ void Game::Start(const char * args){
 void Game::Control(){
 	std::string line;
 	boost::smatch regex_ret;
-	while(sr->ReadLine(&line)){
+	while(clonk->ReadLine(&line)){
 		GetOut()->Put(Parent, OutPrefix, " ", line.c_str(), NULL);
 		//Scan for events
 		if(regex_match(line, regex_ret, rx::cm_base)){
@@ -318,22 +255,15 @@ void Game::Control(){
 			}
 		}
 	}
-	delete sr;
-	sr = NULL;
+	Process * tmp; tmp = clonk; clonk = NULL; delete tmp; 
 	if(Status==PreLobby) Fail(); 
 	return;
 }
 
 void Game::Exit(bool soft /*= true*/, bool wait /*= true*/){
 	cleanup = true;
-	if(soft){ 
-		if(pipe_out != 0) {
-			int temp_pipe = pipe_out;
-			pipe_out=0;
-			close(temp_pipe);
-			//I just hope, that CR closes by saying this. If it does not, I will have problems...
-		}
-	} else if(pid > 0) kill(pid, SIGKILL);
+	if(soft) clonk->ClosePipeTo();
+	else clonk->Kill();
 	pthread_mutex_lock(&msgmutex);
 	int i=MsgQueue.size(); 
 	while(i-->0)
@@ -343,25 +273,24 @@ void Game::Exit(bool soft /*= true*/, bool wait /*= true*/){
 		}
 	pthread_mutex_unlock(&msgmutex);
 	if(wait){
-		waitpid(pid, NULL, 0);
-		pthread_join(worker, NULL);
+		clonk->Wait();
 	}
 }
 
 Game::~Game(){
 	Exit();
-	if(pid > 0) kill(pid, SIGKILL);
-	waitpid(pid, NULL, WNOHANG);
+	clonk->Wait(false);
+	delete clonk;
 	if(Settings.Scen) delete [] Settings.Scen;
 	if(Settings.PW) delete [] Settings.PW;
-	if(msgtid) {pthread_cancel(msgtid); msgtid=NULL;}
+	pthread_cancel(msgtid);
 }
 
 void Game::Deinit(){
 	if(!msg_ready) return;
 	msg_ready = false;
 	pthread_cond_signal(&msgcond);
-	if(msgtid) {pthread_join(msgtid, NULL); msgtid=NULL;}
+	pthread_join(msgtid, NULL);
 	pthread_cond_destroy(&msgcond);
 	pthread_mutex_destroy(&foomutex);
 	pthread_mutex_destroy(&msgmutex);
@@ -374,7 +303,7 @@ bool Game::Fail(){
 		GetOut()->Put(Parent, OutPrefix, " Maximum execution attempts for game exceeded.", NULL);
 		return true;
 	} else {
-		sleep(5);
+		Halt(5);
 		if(cleanup) return true;
 		Start();
 		return false;
@@ -382,23 +311,21 @@ bool Game::Fail(){
 }
 
 bool Game::SendMsg(const char * first, ...){
-	if(!pipe_out || (Status != Lobby && Status != Run)) return false;
+	if(!clonk->IsRunning() || (Status != Lobby && Status != Run)) return false;
 	va_list vl;
 	va_start(vl, first);
-	StringCollector msg(first);
-	const char * str;
-	while((str = va_arg(vl, const char *))) msg.Push(str);
-	//if(str + strlen(str) -1 != '\n') msg.Push("\n");
-	msg.GetBlock();
+	bool ret;
+	ret = clonk->Write(first, vl);
 	va_end(vl);
-	if(*(msg.GetBlock())=='/') //Some commands don't have feedback. Just do a notification.
-		GetOut()->Put(Parent, OutPrefix, " ", msg.GetBlock(), NULL);
-	return (write(pipe_out, msg.GetBlock(), msg.GetLength())==msg.GetLength());
+	if(!ret) return false;
+	/*if(*first=='/') //Some commands don't have feedback. Just do a notification. FIXME: Reimplement that! I am just to lazy now
+		GetOut()->Put(Parent, OutPrefix, " ", msg.GetBlock(), NULL);*/
+	return true;
 }
 
 void Game::SendMsg(int secs, const char * first, ...){
 	if(cleanup) return;
-	int stamp = time(NULL) + secs; //Conserv
+	time_t stamp = time(NULL) + secs; //Conserv
 	va_list vl;
 	va_start(vl, first);
 	StringCollector msg(first);
@@ -432,7 +359,7 @@ void * Game::MsgTimer(void * foo){
 	while(true){
 		if(MsgQueue.size() > 0) {
 			timespec ts;
-			ts.tv_sec = nextevent; 
+			ts.tv_sec = (long)nextevent; 
 			pthread_cond_timedwait(&msgcond, &foomutex, &ts);
 		} else pthread_cond_wait(&msgcond, &foomutex);
 		if(!msg_ready) 

@@ -1,23 +1,5 @@
-/*
-#include <iostream>
-#include <string>
-#include <vector>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <errno.h>
-#include <signal.h>
-#include <time.h>
-#include <math.h>
-#include <pthread.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-*/
+
 #include <boost/regex.hpp>
-//#include <mysql++.h>
 
 namespace rx{
 	static boost::regex ctrl_err	("^Could not Start\\. Error: ");
@@ -50,10 +32,4 @@ namespace rx{
 	//[20:56:35] Spieler Test0r eliminiert.
 	static boost::regex cm_base		("^\\[[0-9]{2}:[0-9]{2}:[0-9]{2}\\] <(.*)> %([^ ]+)( (.*))?$");
 	//
-/*	static boost::regex cm_help		("^\\[[0-9]{2}:[0-9]{2}:[0-9]{2}\\] <(.*)> %help$");
-	//[16:58:32] <CServ> %help
-	static boost::regex cm_list		("^\\[[0-9]{2}:[0-9]{2}:[0-9]{2}\\] <(.*)> %list$");
-	//[16:58:32] <CServ> %list
-	static boost::regex cm_start	("^\\[[0-9]{2}:[0-9]{2}:[0-9]{2}\\] <(.*)> %start (.*)$");
-	//[16:58:32] <CServ> %start sty*/
 }

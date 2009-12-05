@@ -2,6 +2,7 @@
 #include "AutoHost.h"
 
 #include <errno.h>
+#include <pthread.h>
 #include "GameControl.h"
 #include "Config.h"
 #include "Control.h"
@@ -12,6 +13,7 @@ AutoHostList * GetAutoHosts(){
 	return &AutoHosts;
 }
 
+#pragma warning (disable: 4355)
 AutoHost::AutoHost() : ID(AutoHosts.Add(this)), Fails(0), work(true) {
 	OutPrefix = new char[11];
 	sprintf(OutPrefix, "a#%d", ID);
@@ -21,7 +23,7 @@ AutoHost::AutoHost() : ID(AutoHosts.Add(this)), Fails(0), work(true) {
 
 void AutoHost::SoftEnd(bool wait /*= true*/){
 	work = false;
-	if(wait && pthread_self() != tid) pthread_join(tid, NULL);
+	if(wait && !pthread_equal(pthread_self(),tid)) pthread_join(tid, NULL);
 }
 
 AutoHost::~AutoHost(){
@@ -31,7 +33,7 @@ AutoHost::~AutoHost(){
 	delete CurrentGame;
 	CurrentGame = NULL;
 	pthread_mutex_unlock(&mutex);
-	if(pthread_self() != tid) pthread_join(tid, NULL); //And my own thread will end when all that is done. 
+	if(!pthread_equal(pthread_self(),tid)) pthread_join(tid, NULL); //And my own thread will end when all that is done. 
 	pthread_mutex_destroy(&mutex);
 	GetOut()->Put(NULL, OutPrefix, " Terminated.", NULL);
 	delete OutPrefix;
@@ -144,6 +146,7 @@ bool AutoHostList::GameExists(Game * find){
 }
 
 bool AutoHostList::Exists(AutoHost * find){
+	if(!find) return false;
 	int i=Instances.size();
 	while(i--){
 		if(Instances[i]==find) return true;

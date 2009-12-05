@@ -1,28 +1,33 @@
-#include <signal.h>
+#ifdef UNIX
+	#include <signal.h>
+#endif
 #include <iostream>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-
+#include "helpers/AppManagement.h"
+#include "helpers/ListenSocket.h"
 #include "Config.h"
 #include "Control.h"
 #include "AutoHost.h"
 
 
-void CrashHandler(int);
-void EndHandler(int);
-void SigPipeHandler(int);
-
 int main(int argc, char ** argv)
 {
-	signal(SIGBUS, CrashHandler);
-	signal(SIGILL, CrashHandler);
-	signal(SIGSEGV, CrashHandler);
-	signal(SIGABRT, CrashHandler);
-	signal(SIGQUIT, CrashHandler);
-	signal(SIGFPE, CrashHandler);
-	signal(SIGTERM, CrashHandler);
-	signal(SIGINT, EndHandler);
-	signal(SIGPIPE, SigPipeHandler);
+	#ifdef UNIX
+		void CrashHandler(int);
+		void EndHandler(int);
+		void SigPipeHandler(int);
+		signal(SIGBUS, CrashHandler);
+		signal(SIGILL, CrashHandler);
+		signal(SIGSEGV, CrashHandler);
+		signal(SIGABRT, CrashHandler);
+		signal(SIGQUIT, CrashHandler);
+		signal(SIGFPE, CrashHandler);
+		signal(SIGTERM, CrashHandler);
+		signal(SIGINT, EndHandler);
+		signal(SIGPIPE, SigPipeHandler);
+	#elif defined WIN32
+		void EndHandler();
+		atexit(EndHandler);
+	#endif
 
 	char * farg = *argv;
 	if(argc-- > 0) argv++;
@@ -41,63 +46,63 @@ int main(int argc, char ** argv)
 		}
 		argv++;
 	}
+	#if defined RUNTIME_LOGIN
+		if(!db) std::cerr << "Error. No DB specified. Use db:<>"  << std::endl;
+		if(!usr) std::cerr << "Error. No user specified. Use usr:<>"  << std::endl;
+		if(!pw) std::cerr << "Warning. No password specified. Use pw:<>"  << std::endl;
+		if(!db || !pw || !usr) exit(3);
+	#endif
 	GetConfig()->SetLoginData(usr,pw,db,addr);
 	GetConfig()->Reload();
 	while(create_autohost--) new AutoHost();
-	new StreamControl(STDIN_FILENO,STDOUT_FILENO);
-	
-	int       list_s;                /*  listening socket          */
-    int       conn_s;                /*  connection socket         */
-    struct    sockaddr_in servaddr;  /*  socket address structure  */
-	#define Deathloop while(true) sleep(100);
-    if ((list_s = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) {
-		std::cerr << "Error creating listening socket.\n";
-		Deathloop
-    }
-	memset(&servaddr, 0, sizeof(servaddr));
-    servaddr.sin_family      = AF_INET;
-    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    servaddr.sin_port        = htons(GetConfig()->QueryPort);
-    if (bind(list_s, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
-		std::cerr << "Could not bind to socket.\n";
-		Deathloop
-    }
-    if (listen(list_s, 8) < 0 ) {
-		std::cerr << "Could not listen to socket.\n";
-		Deathloop
-    }
-    while (1) {
-		if ((conn_s = accept(list_s, NULL, NULL) ) < 0 ) {
-			std::cerr << "Could not accept connection.\n";
-			break;
-		}
-		new StreamControl(conn_s, conn_s);
-    }
-	Deathloop
-}
-
-void EndHandler(int signo){
-	//delete &Games; What for?
-	GetOut()->Put(NULL, "Exiting.", NULL);
-	exit(0);
-}
-
-void SigPipeHandler(int signo){
-	GetOut()->Put(NULL, "Got SIGPIPE... What now? :(", NULL);
-}
-
-void CrashHandler(int signo){
-	std::cerr << "Exiting due to error. Signo #" << signo;
-	switch(signo){
-		case SIGBUS:  std::cerr << ": SIGBUS";  break;
-		case SIGILL:  std::cerr << ": SIGILL";  break;
-		case SIGSEGV: std::cerr << ": SIGSEGV"; break;
-		case SIGABRT: std::cerr << ": SIGABRT"; break;
-		case SIGQUIT: std::cerr << ": SIGQUIT"; break;
-		case SIGFPE:  std::cerr << ": SIGFPE";  break;
-		case SIGTERM: std::cerr << ": SIGTERM"; break;
+	Stream * io = new Stream();
+	Stream::GetStandardIO(*io);
+	new UserControl(io);
+	ListenSocket queryport;
+	if(!queryport.Init(GetConfig()->QueryPort)) {
+		std::cerr << "Could not listen to " << GetConfig()->QueryPort << std::endl;
+		while(true) Halt(60);
 	}
-	std::cerr << std::endl;
-	//exit(-1);
-	raise(SIGKILL);
+	while(true) {
+		Connection * c = new Connection; //Deleted in UserControl::~
+		if(!queryport.AwaitConnection(c)) break;
+		new UserControl(c);
+	}
+	while(true) Halt(60);
 }
+
+#ifdef UNIX
+
+	void EndHandler(int signo){
+		//delete &Games; What for?
+		GetOut()->Put(NULL, "Exiting.", NULL);
+		exit(0);
+	}
+
+	void SigPipeHandler(int signo){
+		GetOut()->Put(NULL, "Got SIGPIPE... What now? :(", NULL);
+	}
+
+	void CrashHandler(int signo){
+		std::cerr << "Exiting due to error. Signo #" << signo;
+		switch(signo){
+			case SIGBUS:  std::cerr << ": SIGBUS";  break;
+			case SIGILL:  std::cerr << ": SIGILL";  break;
+			case SIGSEGV: std::cerr << ": SIGSEGV"; break;
+			case SIGABRT: std::cerr << ": SIGABRT"; break;
+			case SIGQUIT: std::cerr << ": SIGQUIT"; break;
+			case SIGFPE:  std::cerr << ": SIGFPE";  break;
+			case SIGTERM: std::cerr << ": SIGTERM"; break;
+		}
+		std::cerr << std::endl;
+		//exit(-1);
+		PanicExit();
+	}
+
+#elif defined WIN32
+
+	void EndHandler() {
+		GetOut()->Put(NULL, "Exiting.", NULL);
+	}
+
+#endif

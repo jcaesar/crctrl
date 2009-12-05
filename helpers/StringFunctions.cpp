@@ -1,6 +1,5 @@
-#ifndef StringFunctionsCpp
-#define StringFunctionsCpp
-#include "StringFunctions.hpp"
+
+#include "StringFunctions.h"
 
 bool startswith(const std::string *str1, const std::string *str2){
 	unsigned int len=str2->length();
@@ -31,4 +30,12 @@ bool nocasecmp(const char * str1, const char * str2){
 	return true;
 }
 
-#endif
+int strcharreplace(char * str, const char find, const char replace) {
+	if(!str || !find || !replace) return -1;
+	int ret = 0;
+	while(*str) {
+		if(*str==find) {*str=replace; ++ret;}
+		++str;
+	}
+	return ret;
+}

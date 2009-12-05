@@ -4,23 +4,24 @@
 FIND_PACKAGE ( Boost REQUIRED )
 FIND_PACKAGE ( MySQL )
 FIND_PACKAGE ( mysqlpp )
-FIND_PACKAGE ( pthread) 
+FIND_PACKAGE ( pthread ) 
 
-INCLUDE_DIRECTORIES ( ../inc ${MySQL_INCLUDE_DIR} ${MySQLpp_INCLUDE_DIR} ${Boost_INCLUDE_DIR} ${PTHREADS_INCLUDE_DIR} )
+INCLUDE_DIRECTORIES ( ${crctrl_SOURCE_DIR}/inc ${crctrl_SOURCE_DIR} ${MySQL_INCLUDE_DIR} ${MySQLpp_INCLUDE_DIR} ${Boost_INCLUDE_DIR} ${PTHREADS_INCLUDE_DIR} )
+LINK_DIRECTORIES ( ${Boost_LIBRARY_DIRS} )
 
-
-INCLUDE_DIRECTORIES ( .. )
-
-SET ( crctrl_source 
-	Config.cpp
-	GameControl.cpp
-	Control.cpp
-	AutoHost.cpp
-	Main.cpp
-)
-
+FILE(GLOB_RECURSE crctrl_source "*.cpp")
+FILE(GLOB_RECURSE crctrl_headers "${crctrl_SOURCE_DIR}/inc/*.h")
+FILE(GLOB_RECURSE crctrl_ppheaders "${crctrl_SOURCE_DIR}/inc/*.hpp")
+	   
 IF( "${CMAKE_C_COMPILER}" MATCHES "/usr/bin/gcc" )
 	ADD_DEFINITIONS(-Wall -g)
+ELSEIF( MSVC )
+	ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE -D_CRT_NONSTDC_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS)
 ENDIF( "${CMAKE_C_COMPILER}" MATCHES "/usr/bin/gcc" )
-ADD_EXECUTABLE( crctrl ${crctrl_source} )
-TARGET_LINK_LIBRARIES( crctrl pthread mysqlpp boost_regex-mt helpers )
+IF(RUNTIME_LOGIN)
+	ADD_DEFINITIONS(-DRUNTIME_LOGIN=1)
+ELSE()
+	ADD_DEFINITIONS(-DDEFAULT_SQL_NAME=${SQL_NAME} -DDEFAULT_SQL_PW=${SQL_PW} -DDEFAULT_SQL_DB=${SQL_DB})
+ENDIF()
+ADD_EXECUTABLE( crctrl ${crctrl_source} ${crctrl_headers} ${crctrl_ppheaders} )
+TARGET_LINK_LIBRARIES( crctrl ${PTHREADS_LIBRARIES} ${MySQLpp_LIBRARIES} ${Boost_LIBRARIES} helpers )

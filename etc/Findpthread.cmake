@@ -33,6 +33,7 @@
 # Define a default exception scheme to link against
 # and validate user choice.
 #
+
 IF(NOT DEFINED PTHREADS_EXCEPTION_SCHEME)
     # Assign default if needed
     SET(PTHREADS_EXCEPTION_SCHEME "C")
