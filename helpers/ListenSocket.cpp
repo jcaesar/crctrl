@@ -8,8 +8,9 @@
 	#include <sys/socket.h>
 	#include <arpa/inet.h>
 #elif defined WIN32
-	//#include <winsock2.h>
+	#include <winsock2.h>
 	#include <conio.h>
+	#include <iostream>
 #endif
 
 ListenSocket::ListenSocket() {

@@ -48,7 +48,9 @@ bool Background() {
 			PanicExit(); //It's not really panic...
 		}
 	#elif defined WIN32
-		#pragma warning(disable: 4800) //Forcing int to bool
+		#ifdef _MSC_VER
+			#pragma warning(disable: 4800)
+		#endif
 		return FreeConsole();
 	#endif
 }

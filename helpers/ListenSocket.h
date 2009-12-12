@@ -2,7 +2,12 @@
 #define ListenSocketH
 
 #include <string>
-#include "Stream.h"
+
+#ifdef UNIX
+	#include "Stream.h"
+#elif defined WIN32
+	#include <winsock2.h>
+#endif
 
 #ifndef STREAM_MAXCHARS
 	#define STREAM_MAXCHARS 128
