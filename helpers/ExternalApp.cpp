@@ -4,17 +4,18 @@
 #include "StringFunctions.h"
 #include "StringCollector.hpp"
 
-#if defined UNIX
+#if defined unix
 	#include <errno.h>
 	#include <signal.h>
 	#include <sys/wait.h>
+	#include <cstdlib>
 #elif defined WIN32
 	#include <windows.h>
 	#pragma comment(lib, "Ws2_32.lib")
 #endif
 
-Process::Process() : path(NULL), args(NULL), Status(PreRun) {
-	#ifdef UNIX
+Process::Process() : Status(PreRun), path(NULL), args(NULL) {
+	#ifdef unix
 		pid = 0;
 	#elif defined WIN32
 		hChildProcess = NULL;
@@ -47,20 +48,15 @@ bool Process::SetArguments(const char * spath, const char * sargs) {
 
 bool Process::Start() {
 	if(Status != PreRun) return false;
-	#ifdef UNIX
+	#ifdef unix
 		int fd1[2];
 		int fd2[2];
 		//int fderr[2];
 		int fdtmp[2];
 		pid_t child;
-		worker = pthread_self();
-		Status=PreLobby;
-		if ( (pipe(fd1) < 0) || (pipe(fd2) < 0) /*|| (pipe(fderr) < 0)*/ || (pipe(fdtmp) < 0) ){
-			std::cerr << "Error opening Pipes." << std::endl;
-			return false;
-		}
+		if ( (pipe(fd1) < 0) || (pipe(fd2) < 0) /*|| (pipe(fderr) < 0)*/ || (pipe(fdtmp) < 0) ) return false;
 		child = fork();
-		if(child < 0) { std::cerr << "Error forking process." << std::endl; return false;}
+		if(child < 0) return false;
 		if(child == 0){
 			close(fdtmp[0]);
 			child = fork();
@@ -70,21 +66,20 @@ bool Process::Start() {
 				close(fd2[0]);
 				//close(fderr[0]);
 				if (fd1[0] != STDIN_FILENO){
-					if (dup2(fd1[0], STDIN_FILENO) != STDIN_FILENO) std::cout << "Error with stdin" << std::endl;
+					//if (dup2(fd1[0], STDIN_FILENO) != STDIN_FILENO) err
 					close(fd1[0]);
 				}
 				if (fd2[1] != STDOUT_FILENO){
-					if (dup2(fd2[1], STDOUT_FILENO) != STDOUT_FILENO) std::cout << "Error with stdout" << std::endl;
+					//if (dup2(fd2[1], STDOUT_FILENO) != STDOUT_FILENO) err
 					close(fd2[1]);
 				}
 				/*if (fderr[1] != STDERR_FILENO){
-					if (dup2(fderr[1], STDERR_FILENO) != STDERR_FILENO) std::cout << "Error with stderr" << std::endl;
+					//if (dup2(fderr[1], STDERR_FILENO) != STDERR_FILENO) err
 					close(fderr[1]);
 				}*/
 
 				execl(path, args, NULL);
 				//When execl does fine, it will never return.
-				std::cout << "Call to execl failed. Error: " << strerror(errno) << std::endl; //Give parent process a notice.
 				close(fd1[0]);
 				close(fd2[1]);
 				//close(fderr[1]);
@@ -97,7 +92,7 @@ bool Process::Start() {
 		}
 		close(fdtmp[1]);
 		waitpid(child, NULL, 0);
-		StreamReader pidread (fdtmp[0]);
+		StreamIn pidread (fdtmp[0]);
 		std::string pids;
 		if(pidread.ReadLine(&pids)) pid = atoi(pids.c_str());
 		else pid = 0;
@@ -163,12 +158,14 @@ bool Process::Start() {
 		if (!CloseHandle(hInputRead)) return false;
 		if (!CloseHandle(hErrorWrite)) return false;
 	#endif
+	Status = Active;
 	return true;
 }
 
 bool Process::Kill(bool brute) {
-	#ifdef UNIX
-		return !kill(pid, brute?SIGKILL:SIGTERM);
+	#ifdef unix
+		if(pid>0) return !kill(pid, brute?SIGKILL:SIGTERM);
+		else return 0;
 	#elif defined WIN32
 		#pragma warning (disable: 4800)
 		return TerminateProcess(hChildProcess, -1);
@@ -176,9 +173,9 @@ bool Process::Kill(bool brute) {
 }
 
 bool Process::Wait(bool noblock) {
-	#ifdef UNIX
+	#ifdef unix
 		int status;
-		waitpid(pid, &status, noblock?WNOHANG);
+		waitpid(pid, &status, noblock?WNOHANG:0);
 		return status;
 	#elif defined WIN32
 		return WaitForSingleObject(hChildProcess, noblock?1:INFINITE)!=WAIT_FAILED;

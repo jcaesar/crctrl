@@ -3,11 +3,7 @@
 
 #include "StringCollector.hpp"
 #include <sstream>
-
-#ifdef UNIX
-	#include <sys/socket.h>
-	#include <arpa/inet.h>
-#elif defined WIN32
+#if defined WIN32
 	#include <winsock2.h>
 	#include <conio.h>
 	#include <iostream>
@@ -20,9 +16,8 @@ ListenSocket::ListenSocket() {
 }
 
 bool ListenSocket::Init(int port) {
-	#ifdef UNIX
+	#ifdef unix
 	    if ((list_s = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) {
-			std::cerr << "Error creating listening socket.\n";
 			return false;
 	    }
 		memset(&servaddr, 0, sizeof(servaddr));
@@ -30,11 +25,9 @@ bool ListenSocket::Init(int port) {
 	    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
 	    servaddr.sin_port        = htons(port);
 	    if (bind(list_s, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
-			std::cerr << "Could not bind to socket.\n";
 			return false;
 	    }
 	    if (listen(list_s, 8) < 0 ) {
-			std::cerr << "Could not listen to socket.\n";
 			return false;
 	    }
 	#elif defined WIN32
@@ -58,13 +51,12 @@ bool ListenSocket::Init(int port) {
 }
 
 bool ListenSocket::AwaitConnection(Connection * Conn) {
-	#ifdef UNIX
+	#ifdef unix
 		if ((conn_s = accept(list_s, NULL, NULL) ) < 0 ) {
-			std::cerr << "Could not accept connection.\n";
 			return false;
 		}
-		Conn.StreamIn::fd_in = conn_s;
-		Conn.StreamOut::fd_out = conn_s;
+		Conn->StreamIn::fd_in = conn_s;
+		Conn->StreamOut::fd_out = conn_s;
 	#elif defined WIN32
 		int fromlen=sizeof(from);
 		Conn->client=accept(server, (struct sockaddr*)&from, &fromlen);
@@ -84,7 +76,7 @@ ListenSocket::~ListenSocket() {
 		Close();
 	}
 
-	bool Connection::ReadLine(std::string * line, const char delim [2]){
+	bool Connection::ReadLine(std::string * line, const char delim [3]){
 		if(!client) return false;
 		std::stringstream ss;
 		do{
@@ -120,12 +112,12 @@ ListenSocket::~ListenSocket() {
 	bool Connection::Write(const char * first, ...) {
 		va_list vl;
 		va_start(vl, first);
-		Write(first, vl);
+		WriteList(first, vl);
 		va_end(vl);
 		return true;
 	}
 
-	bool Connection::Write(const char * first, va_list vl) {
+	bool Connection::WriteList(const char * first, va_list vl) {
 		StringCollector msg;
 		const char * str;
 		while((str = va_arg(vl, const char *))) msg.Push(str);

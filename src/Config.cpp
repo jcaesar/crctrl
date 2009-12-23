@@ -9,6 +9,10 @@
 #include "helpers/AppManagement.h"
 #include "helpers/StringFunctions.h"
 
+//Check login definitions
+#if (((!defined DEFAULT_SQL_NAME) || (!defined DEFAULT_SQL_PW) || (!defined DEFAULT_SQL_DB)) && (!defined RUNTIME_LOGIN))
+	#error "You tricked your build system, eh?"
+#endif
 #ifndef DEFAULT_SQL_NAME
 	#define DEFAULT_SQL_NAME "crctrl"
 #endif

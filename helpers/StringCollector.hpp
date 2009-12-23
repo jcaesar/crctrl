@@ -1,6 +1,10 @@
 #ifndef StringCollectorHpp
 #define StringCollectorHpp
 
+#ifdef unix
+	#include <string.h>
+#endif
+
 class StringCollector{
 	private:
 		const char * data;

@@ -10,7 +10,13 @@
 	//ReadFile and WriteFile have Differing arguments
 #endif
 
-StreamIn::StreamIn() : buff(buffadr), rv(0), fd_in(NULL) {}
+StreamIn::StreamIn() : fd_in(NULL), rv(0), buff(buffadr) {}
+
+#ifdef unix
+	StreamIn::StreamIn(int fd) : fd_in(fd), rv(0), buff(buffadr) {}
+#elif defined win32
+	StreamIn::StreamIn(HANDLE fd) : fd_in(fd), rv(0), buff(buffadr) {}
+#endif
 
 StreamIn::~StreamIn(){
 	Close();
@@ -31,7 +37,7 @@ bool StreamIn::ReadLine(std::string * line, const char delim [2]){
 			ss << buffadr2;
 		}
 		buff = buffadr;
-		#ifdef UNIX
+		#ifdef unix
 		if((rv = read(fd_in, buff, STREAM_MAXCHARS-1)) <= 0) 
 		#elif WIN32
 		if(!ReadFile(fd_in, buff, STREAM_MAXCHARS-1, &rv, NULL) || rv==0)
@@ -63,18 +69,18 @@ bool StreamOut::Write(const char * first, ...){
 	if(!fd_out) return false;
 	va_list vl;
 	va_start(vl, first);
-	Write(first, vl);
+	WriteList(first, vl);
 	va_end(vl);
 	return true;
 }
 
-bool StreamOut::Write(const char * first, va_list vl){
+bool StreamOut::WriteList(const char * first, va_list vl){
 	if(!fd_out) return false;
 	StringCollector msg;
 	const char * str;
 	while((str = va_arg(vl, const char *))) msg.Push(str);
 	msg.GetBlock();
-	#ifdef UNIX
+	#ifdef unix
 		return (write(fd_out, msg.GetBlock(), msg.GetLength())==msg.GetLength());
 	#elif WIN32
 		DWORD br;
@@ -93,7 +99,7 @@ void Stream::ClosePipes() {
 }
 
 void Stream::GetStandardIO(Stream & toset) {
-	#ifdef UNIX
+	#ifdef unix
 		toset.fd_out = STDOUT_FILENO;
 		toset.fd_in  = STDIN_FILENO;
 	#elif WIN32

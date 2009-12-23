@@ -8,7 +8,7 @@ class Process : public Stream {
 		enum { PreRun, Active, Stopped } Status;
 		char * path;
 		char * args;
-		#if defined UNIX
+		#if defined unix
 			pid_t pid;
 		#elif defined WIN32
 			HANDLE hChildProcess;

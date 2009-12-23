@@ -1,6 +1,7 @@
 
 #include "Control.h"
 
+#include <stdarg.h>
 #include "helpers/StringFunctions.h"
 #include "helpers/StringCollector.hpp"
 #include "helpers/AppManagement.h"
@@ -68,8 +69,10 @@ void UserControl::Work(){
 }
 
 void UserControl::PrintStatus(AutoHost * stat /*= NULL*/){
-	if(GetAutoHosts()->Exists(stat)) Out.Put(this, stat->GetPrefix(), " ", stat->GetGame()->GetScen(), NULL);
-	else{
+	if(GetAutoHosts()->Exists(stat)) {
+		if(stat->GetGame()) Out.Put(this, stat->GetPrefix(), " ", stat->GetGame()->GetScen(), NULL); //FIXME: This is not thread-safe.
+		else Out.Put(this, stat->GetPrefix(), " currently empty.", NULL);
+	} else {
 		int i=0;
 		while(AutoHost * ah = GetAutoHosts()->Get(i++)) PrintStatus(ah);
 	}

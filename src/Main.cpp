@@ -1,4 +1,4 @@
-#ifdef UNIX
+#ifdef unix
 	#include <signal.h>
 #endif
 #include <iostream>
@@ -8,10 +8,13 @@
 #include "Control.h"
 #include "AutoHost.h"
 
+#if (!defined WIN32) && (!defined unix)
+	#error "I know, this comes late, but you're on the wrong system."
+#endif
 
 int main(int argc, char ** argv)
 {
-	#ifdef UNIX
+	#ifdef unix
 		void CrashHandler(int);
 		void EndHandler(int);
 		void SigPipeHandler(int);
@@ -71,7 +74,7 @@ int main(int argc, char ** argv)
 	while(true) Halt(60);
 }
 
-#ifdef UNIX
+#ifdef unix
 
 	void EndHandler(int signo){
 		//delete &Games; What for?

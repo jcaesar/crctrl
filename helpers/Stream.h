@@ -44,12 +44,12 @@ class Stream;
 };*/
 
 class StreamIn /*: private StreamBase */{
-	friend Process;
-	friend ListenSocket;
-	friend Connection;
-	friend Stream;
+	friend class Process;
+	friend class ListenSocket;
+	friend class Connection;
+	friend class Stream;
 	private:
-		#if defined UNIX
+		#if defined unix
 			int fd_in;
 			int rv; //return value of read()
 		#elif defined WIN32
@@ -61,10 +61,15 @@ class StreamIn /*: private StreamBase */{
 		char * buffadr2;
 	public:
 		StreamIn();
+		#ifdef unix
+			StreamIn(int fd_in);
+		#elif defined WIN32
+			StreamIn(HANDLE fd_in);
+		#endif
 		virtual ~StreamIn();
-		bool ReadLine(std::string *, const char [2]);
-		#if defined UNIX
-			inline bool ReadLine(std::string * line){return(ReadLine(line, '\10\0'));}
+		bool ReadLine(std::string *, const char [3]);
+		#if defined unix
+			inline bool ReadLine(std::string * line){return(ReadLine(line, "\10\0"));}
 		#elif defined WIN32
 			inline bool ReadLine(std::string * line){return(ReadLine(line, "\13\10"));}
 		#endif
@@ -72,11 +77,11 @@ class StreamIn /*: private StreamBase */{
 };
 
 class StreamOut /*: private StreamBase */{
-	friend Process;
-	friend ListenSocket;
-	friend Stream;
+	friend class Process;
+	friend class ListenSocket;
+	friend class Stream;
 	private:
-		#if defined UNIX
+		#if defined unix
 			int fd_out;
 		#elif defined WIN32
 			HANDLE fd_out;
@@ -85,7 +90,7 @@ class StreamOut /*: private StreamBase */{
 		StreamOut();
 		virtual ~StreamOut();
 		bool Write(const char *, ...);
-		virtual bool Write(const char *, va_list);
+		virtual bool WriteList(const char *, va_list);
 		virtual void Close();
 };
 

@@ -13,7 +13,9 @@ AutoHostList * GetAutoHosts(){
 	return &AutoHosts;
 }
 
-#pragma warning (disable: 4355)
+#ifdef _MSC_VER
+	#pragma warning (disable: 4355)
+#endif
 AutoHost::AutoHost() : ID(AutoHosts.Add(this)), Fails(0), work(true) {
 	OutPrefix = new char[11];
 	sprintf(OutPrefix, "a#%d", ID);

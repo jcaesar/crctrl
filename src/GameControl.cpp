@@ -1,6 +1,7 @@
 
 #include "GameControl.h"
 
+#include <stdarg.h>
 #include <boost/regex.hpp>
 #include "helpers/StringCollector.hpp"
 #include "helpers/AppManagement.h"
@@ -117,7 +118,7 @@ void Game::Start(const char * args){
 	clonk = new Process();
 	char * fullpath = new char[strlen(GetConfig()->Path) + 7];
 	strcpy(fullpath, GetConfig()->Path);
-	strcpy(fullpath+strlen(GetConfig()->Path), "/clonk");
+	strcpy(fullpath+strlen(GetConfig()->Path), "clonk");
 	clonk -> SetArguments(fullpath, args);
 	delete [] fullpath;
 	if(!clonk -> Start()) Fail();
@@ -262,8 +263,8 @@ void Game::Control(){
 
 void Game::Exit(bool soft /*= true*/, bool wait /*= true*/){
 	cleanup = true;
-	if(soft) clonk->ClosePipeTo();
-	else clonk->Kill();
+	if(soft) {if(clonk) clonk->ClosePipeTo();}
+	else {if(clonk) clonk->Kill();}
 	pthread_mutex_lock(&msgmutex);
 	int i=MsgQueue.size(); 
 	while(i-->0)
@@ -272,14 +273,14 @@ void Game::Exit(bool soft /*= true*/, bool wait /*= true*/){
 			MsgQueue.erase(MsgQueue.begin()+i);
 		}
 	pthread_mutex_unlock(&msgmutex);
-	if(wait){
+	if(wait && clonk){
 		clonk->Wait();
 	}
 }
 
 Game::~Game(){
 	Exit();
-	clonk->Wait(false);
+	if(clonk) clonk->Wait(false);
 	delete clonk;
 	if(Settings.Scen) delete [] Settings.Scen;
 	if(Settings.PW) delete [] Settings.PW;
@@ -315,7 +316,7 @@ bool Game::SendMsg(const char * first, ...){
 	va_list vl;
 	va_start(vl, first);
 	bool ret;
-	ret = clonk->Write(first, vl);
+	ret = clonk->WriteList(first, vl);
 	va_end(vl);
 	if(!ret) return false;
 	/*if(*first=='/') //Some commands don't have feedback. Just do a notification. FIXME: Reimplement that! I am just to lazy now
