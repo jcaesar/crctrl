@@ -68,7 +68,7 @@ class StreamIn /*: private StreamBase */{
 		#endif
 		virtual ~StreamIn();
 		bool ReadLine(std::string *);
-		virtual bool StreamIn::ReadFinal();
+		virtual bool ReadFinal();
 		void Close();
 };
 

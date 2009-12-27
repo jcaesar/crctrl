@@ -58,22 +58,6 @@ bool Game::SetScen(const char * path){ //DEPRECATED
 bool Game::SetScen(const ScenarioSet * scen){
 	if(!scen) return false;
 	StatusUnstable();
-	/* if(Status==Setting && scen != 0){
-		delete [] Settings.Scen;
-		Settings.ScenPath = new char[strlen(scen->GetPath())+1];
-		strcpy(Settings.ScenPath,scen->GetPath());
-		if(scen->GetPW() && strlen(scen->GetPW())){
-			Settings.PW = new char[strlen(scen->GetPW())+1];
-			strcpy(Settings.PW,scen->GetPW());
-		}
-		Settings.LobbyTime=scen->GetTime();
-		if(changeleague){
-			srand((unsigned)time(NULL)); 
-			Settings.League = (scen->GetLeague()) > static_cast<float>(rand())/RAND_MAX;
-		}
-		UnlockStatus();
-		return true;
-	} FIXME: Delete this block, if you don't need it */
 	if(Settings.Scen) delete Settings.Scen;
 	Settings.Scen = new ScenarioSet(*scen);
 	StatusStable();

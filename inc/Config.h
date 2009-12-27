@@ -90,6 +90,6 @@ class Setting : public StatusLocks {
 		const char * GetBan(const char *);
 };
 
-inline Setting * GetConfig();
+Setting * GetConfig();
 
 #endif
