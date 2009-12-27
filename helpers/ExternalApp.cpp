@@ -34,14 +34,14 @@ bool Process::SetArguments(const char * spath, const char * sargs) {
 		if(path) delete [] path;
 		path = new char [strlen(spath)+1];
 		strcpy(path, spath);
+		#ifdef WIN32
+			strcharreplace(path, '/', '\\');
+		#endif
 	}
 	if(sargs) {
 		if(args) delete [] args;
 		args = new char [strlen(sargs)+1];
 		strcpy(args, sargs);
-		#ifdef WIN32
-			strcharreplace(args, '/', '\\');
-		#endif
 	}
 	return true;
 }
@@ -111,25 +111,16 @@ bool Process::Start() {
 		sa.bInheritHandle = TRUE;
 		HANDLE hInputWriteTmp, hInputRead;
 		HANDLE hOutputReadTmp, hOutputWrite;
-		HANDLE hErrorWrite;
+		//HANDLE hErrorWrite;
 		if (!CreatePipe(&hOutputReadTmp,&hOutputWrite,&sa,0))
 			return false;
-		if (!DuplicateHandle(GetCurrentProcess(),hOutputWrite, GetCurrentProcess(),&hErrorWrite,0,TRUE,DUPLICATE_SAME_ACCESS))
-			return false;
+		//if (!DuplicateHandle(GetCurrentProcess(),hOutputWrite, GetCurrentProcess(),&hErrorWrite,0,TRUE,DUPLICATE_SAME_ACCESS))
+		//	return false;
 		if (!CreatePipe(&hInputRead,&hInputWriteTmp,&sa,0))
 			return false;
-		if (!DuplicateHandle(GetCurrentProcess(),hOutputReadTmp,
-									GetCurrentProcess(),
-									&fd_out, // Address of new handle.
-									0,FALSE, // Make it uninheritable.
-									DUPLICATE_SAME_ACCESS))
+		if (!DuplicateHandle(GetCurrentProcess(),hOutputReadTmp, GetCurrentProcess(), &fd_in,0,FALSE,DUPLICATE_SAME_ACCESS))
 			return false;
-
-		if (!DuplicateHandle(GetCurrentProcess(),hInputWriteTmp,
-									GetCurrentProcess(),
-									&fd_in, // Address of new handle.
-									0,FALSE, // Make it uninheritable.
-									DUPLICATE_SAME_ACCESS))
+		if (!DuplicateHandle(GetCurrentProcess(),hInputWriteTmp, GetCurrentProcess(), &fd_out ,0,FALSE,DUPLICATE_SAME_ACCESS))
 			return false;
 		if (!CloseHandle(hOutputReadTmp)) return false;
 		if (!CloseHandle(hInputWriteTmp)) return false;
@@ -140,23 +131,21 @@ bool Process::Start() {
 		si.dwFlags = STARTF_USESTDHANDLES;
 		si.hStdOutput = hOutputWrite;
 		si.hStdInput  = hInputRead;
-		si.hStdError  = hErrorWrite;
-		// Use this if you want to hide the child:
+		//si.hStdError  = hErrorWrite;
 		si.wShowWindow = SW_HIDE;
 		int lenp = strlen(path); int lena = strlen(args);
-		char * cmd = new char [lenp + lena + 3];
+		char * cmd = new char [lenp + lena + 4];
 		*cmd = '"';
 		strcpy(cmd+1,path);
-		*(cmd+lenp) = '"';
-		strcpy(cmd+1+lenp,path);
-		*(cmd+lenp+lena+3) = NULL;
+		strcpy(cmd+lenp+1, "\" ");
+		strcpy(cmd+3+lenp,args);
 		if (!CreateProcess(NULL,cmd,NULL,NULL,TRUE,CREATE_NEW_CONSOLE,NULL,NULL,&si,&pi))
 			return false;
 		hChildProcess = pi.hProcess;
 		if (!CloseHandle(pi.hThread)) return false;
 		if (!CloseHandle(hOutputWrite)) return false;
 		if (!CloseHandle(hInputRead)) return false;
-		if (!CloseHandle(hErrorWrite)) return false;
+		//if (!CloseHandle(hErrorWrite)) return false;
 	#endif
 	Status = Active;
 	return true;

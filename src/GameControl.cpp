@@ -19,22 +19,19 @@ std::vector <TimedMsg *> Game::MsgQueue;
 bool Game::msg_ready;
 
 
-Game::Game(AutoHost * parent) : //FIXME: Better use reference
-	OutPrefix(parent->GetPrefix()),
-	Parent(parent)
+Game::Game(AutoHost & parent) :
+	OutPrefix(parent.GetPrefix()),
+	Parent(&parent)
 {
 	cleanup=false;
-	Settings.Scen = NULL;
-	Settings.PW = NULL;
+	Settings.Scen = 0;
 	clonk = NULL;
 	ExecTrials=0;
 	//Standard Settings:
 	Settings.Ports.TCP=GetConfig()->Ports.TCP;
 	Settings.Ports.UDP=GetConfig()->Ports.UDP;
-	Settings.LobbyTime=GetConfig()->LobbyTime;
 	Settings.SignOn=GetConfig()->SignOn;
 	Settings.Record=GetConfig()->Record;
-	Settings.League = GetConfig()->League > static_cast<float>(rand())/RAND_MAX;
 	Status=Setting;
 }
 
@@ -48,21 +45,23 @@ void Game::Init() {
 	//msgtid=NULL; FIXME: Understand, why that line was here...
 }
 
-bool Game::SetScen(const char * scen){
-	if(Status==Setting){
-		if(Settings.Scen) delete [] Settings.Scen;
-		Settings.Scen = new char[strlen(scen)+1];
-		strcpy(Settings.Scen,scen);
+bool Game::SetScen(const char * path){ //DEPRECATED
+	if(Settings.Scen && Status==Setting && !Settings.Scen->IsFixed()){
+		StatusUnstable();
+		Settings.Scen->SetPath(path);
+		StatusStable();
 		return true;
-	} 
+	}
 	return false;
 }
 
-bool Game::SetScen(const ScenarioSet * scen, bool changeleague /*==true*/){
-	if(Status==Setting && scen != 0){
+bool Game::SetScen(const ScenarioSet * scen){
+	if(!scen) return false;
+	StatusUnstable();
+	/* if(Status==Setting && scen != 0){
 		delete [] Settings.Scen;
-		Settings.Scen = new char[strlen(scen->GetPath())+1];
-		strcpy(Settings.Scen,scen->GetPath());
+		Settings.ScenPath = new char[strlen(scen->GetPath())+1];
+		strcpy(Settings.ScenPath,scen->GetPath());
 		if(scen->GetPW() && strlen(scen->GetPW())){
 			Settings.PW = new char[strlen(scen->GetPW())+1];
 			strcpy(Settings.PW,scen->GetPW());
@@ -72,17 +71,23 @@ bool Game::SetScen(const ScenarioSet * scen, bool changeleague /*==true*/){
 			srand((unsigned)time(NULL)); 
 			Settings.League = (scen->GetLeague()) > static_cast<float>(rand())/RAND_MAX;
 		}
+		UnlockStatus();
 		return true;
-	} 
-	return false;
+	} FIXME: Delete this block, if you don't need it */
+	if(Settings.Scen) delete Settings.Scen;
+	Settings.Scen = new ScenarioSet(*scen);
+	StatusStable();
+	return true;
 }
 
 void Game::Start(){
+	if(!Settings.Scen) throw "Trying to start a game: No Scenario was set.";
+	Settings.Scen->Fix();
 	//std::string cmd;
 	StringCollector cmd("\"\"/fullscreen\"");
 	if(Settings.SignOn) cmd += " \"/signup\"";
 	else cmd += " \"/nosignup\"";
-	if(Settings.League)cmd += " \"/league\"";
+	if(Settings.Scen->GetLeague() > static_cast<float>(rand())/RAND_MAX)cmd += " \"/league\"";
 	else cmd += " \"/noleague\"";
 	if(Settings.Record) cmd += " \"/record\"";
 	cmd += " \"/tcpport:";
@@ -91,28 +96,29 @@ void Game::Start(){
 	cmd	+= " \"/udpport:";
 	cmd	+= Settings.Ports.UDP;
 	cmd += "\"";
-	if(Settings.LobbyTime>0){
+	if(Settings.Scen->GetTime()>0){
 		cmd += " \"/lobby:";
-		cmd += Settings.LobbyTime;
+		cmd += Settings.Scen->GetTime();
 		cmd += "\""; 
 	}
-	if(strlen(GetConfig()->ConfigPath)>0){
+	if(*(GetConfig()->ConfigPath)){
 		cmd += " /config:\"";
 		cmd += GetConfig()->ConfigPath;
 		cmd += "\"";
 	}
-	if(Settings.PW && strlen(Settings.PW)>0){
+	if(Settings.Scen->GetPW() && *(Settings.Scen->GetPW())){
 		cmd += " /pass:\"";
-		cmd += Settings.PW;
+		cmd += Settings.Scen->GetPW();
 		cmd += "\"";
 	}
 	cmd += " \"";
-	cmd += Settings.Scen;
+	cmd += Settings.Scen->GetPath();
 	cmd += "\"";
 	Start(cmd.GetBlock());
 }
 
 void Game::Start(const char * args){
+	StatusUnstable();
 	worker = pthread_self();
 	if(clonk) delete clonk;
 	clonk = new Process();
@@ -121,6 +127,7 @@ void Game::Start(const char * args){
 	strcpy(fullpath+strlen(GetConfig()->Path), "clonk");
 	clonk -> SetArguments(fullpath, args);
 	delete [] fullpath;
+	StatusStable();
 	if(!clonk -> Start()) Fail();
 	if(!msg_ready) Init();
 	Control();
@@ -130,27 +137,30 @@ void Game::Control(){
 	std::string line;
 	boost::smatch regex_ret;
 	while(clonk->ReadLine(&line)){
+		StatusUnstable();
 		GetOut()->Put(Parent, OutPrefix, " ", line.c_str(), NULL);
 		//Scan for events
 		if(regex_match(line, regex_ret, rx::cm_base)){
 			if(!regex_ret[2].compare("hilf") || !regex_ret[2].compare("help")) {
 				SendMsg("Liste aller Befehle:\n----%list\n--------Listet alle verfügbaren Szenarien auf\n----%start Szenname -lobby:Sekunden -passwort:\"pw\" -liga\n--------Startet ein Szenario. Alles ab -lobby ist optional.\n----%hilf\n--------Gibt das hier aus.\n", NULL);
 			} else if(!regex_ret[2].compare("list")) {
-				StringCollector list("Folgende Szenarien koennen gestartet werden:\n");
+				StringCollector list("Folgende Szenarien koennen gestartet werden:\n", false);
 				const ScenarioSet * scn;
+				GetConfig()->LockStatus();
 				for(int i=0; (scn = GetConfig()->GetScen(i)); i++){
 					const char * name = scn->GetName(0);
 					if(name){
-						list.Push("-");
+						list.Push("-", false);
 						int i=0;
 						while(name) {
-							list.Push(name);
+							list.Push(name, false);
 							name = scn->GetName(++i);
-							if(name) list.Push(", ");
+							if(name) list.Push(", ", false);
 						}
 						list.Push("\n");
 					}
 				}
+				GetConfig()->UnlockStatus();
 				SendMsg(list.GetBlock(), NULL);
 			} else if(!regex_ret[2].compare("start")) {
 				char * cmd = new char [regex_ret[4].length() + 1];
@@ -163,7 +173,7 @@ void Game::Control(){
 					*params = ' ';
 				} else scn = GetConfig()->GetScen(cmd);
 				if(scn != 0) {
-					scn = new ScenarioSet(scn); //Make a Copy of it.
+					scn = new ScenarioSet(*scn); //Make a Copy of it.
 					if(strstr(cmd, " -liga")) scn -> SetLeague(1);
 					else scn -> SetLeague(0);
 					char * pos;
@@ -248,20 +258,24 @@ void Game::Control(){
 			}
 		} else if(Status==PreLobby) {
 			if(regex_match(line, rx::ctrl_err) || regex_match(line, rx::gm_exit)) {
-				Fail(); return;
+				StatusStable(); Fail(); return;
 			}
 			if(regex_match(line, rx::gm_lobby)){
 				Status=Lobby;
 				SendMsg("/set maxplayer 1337\n", NULL);
 			}
 		}
+		StatusStable();
 	}
-	Process * tmp; tmp = clonk; clonk = NULL; delete tmp; 
+	StatusUnstable();
+	delete clonk; clonk = NULL;
+	StatusStable();
 	if(Status==PreLobby) Fail(); 
 	return;
 }
 
 void Game::Exit(bool soft /*= true*/, bool wait /*= true*/){
+	StatusUnstable();
 	cleanup = true;
 	if(soft) {if(clonk) clonk->ClosePipeTo();}
 	else {if(clonk) clonk->Kill();}
@@ -276,14 +290,15 @@ void Game::Exit(bool soft /*= true*/, bool wait /*= true*/){
 	if(wait && clonk){
 		clonk->Wait();
 	}
+	StatusStable();
 }
 
 Game::~Game(){
+	StatusUnstable();
 	Exit();
 	if(clonk) clonk->Wait(false);
 	delete clonk;
-	if(Settings.Scen) delete [] Settings.Scen;
-	if(Settings.PW) delete [] Settings.PW;
+	if(Settings.Scen) delete Settings.Scen;
 	pthread_cancel(msgtid);
 }
 
@@ -298,12 +313,15 @@ void Game::Deinit(){
 }
 
 bool Game::Fail(){
+	StatusUnstable();
 	ExecTrials++;
 	if(ExecTrials >= GetConfig()->MaxExecTrials) {
 		Status = Failed;
 		GetOut()->Put(Parent, OutPrefix, " Maximum execution attempts for game exceeded.", NULL);
+		StatusStable();
 		return true;
 	} else {
+		StatusStable();
 		Halt(5);
 		if(cleanup) return true;
 		Start();
@@ -329,10 +347,10 @@ void Game::SendMsg(int secs, const char * first, ...){
 	time_t stamp = time(NULL) + secs; //Conserv
 	va_list vl;
 	va_start(vl, first);
-	StringCollector msg(first);
+	StringCollector msg(first, false);
 	const char * str;
 	while((str = va_arg(vl, const char *)))
-		msg.Push(str);
+		msg.Push(str, false);
 	//if(str + strlen(str) -1 != '\n') msg.Push("\n");
 	msg.GetBlock(); 
 	va_end(vl);

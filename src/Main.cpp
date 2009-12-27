@@ -2,8 +2,8 @@
 	#include <signal.h>
 #endif
 #include <iostream>
-#include "helpers/AppManagement.h"
 #include "helpers/ListenSocket.h"
+#include "helpers/AppManagement.h"
 #include "Config.h"
 #include "Control.h"
 #include "AutoHost.h"
@@ -53,7 +53,7 @@ int main(int argc, char ** argv)
 		if(!db) std::cerr << "Error. No DB specified. Use db:<>"  << std::endl;
 		if(!usr) std::cerr << "Error. No user specified. Use usr:<>"  << std::endl;
 		if(!pw) std::cerr << "Warning. No password specified. Use pw:<>"  << std::endl;
-		if(!db || !pw || !usr) exit(3);
+		if(!db || !usr) exit(3);
 	#endif
 	GetConfig()->SetLoginData(usr,pw,db,addr);
 	GetConfig()->Reload();

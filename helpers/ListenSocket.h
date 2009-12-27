@@ -1,14 +1,14 @@
 #ifndef ListenSocketH
 #define ListenSocketH
 
-#include <string>
-#include "Stream.h"
 #ifdef unix
 	#include <sys/socket.h>
 	#include <arpa/inet.h>
 #elif defined WIN32
-	#include <winsock2.h>
+	#include <winsock2.h> //important to include that before windows.h, which is included by Stream.h
 #endif
+#include <string>
+#include "Stream.h"
 
 #ifndef STREAM_MAXCHARS
 	#define STREAM_MAXCHARS 128
@@ -21,11 +21,12 @@ class Connection : public Stream { //Under unix, this implements nothing new.
 	#ifdef WIN32
 		private:
 			SOCKET client;
+			bool WriteFinal(const char *, int);
 		public:
 			~Connection();
-			bool ReadLine(std::string *, const char [3]);
+			bool Connection::ReadFinal();
 			bool Write(const char *, ...);
-			bool WriteList(const char *, va_list);
+			bool WriteList(const char *, va_list &);
 			void Close();
 	#endif
 };

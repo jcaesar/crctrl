@@ -5,6 +5,7 @@ class Game;
 #include <pthread.h>
 #include <vector>
 #include <string>
+#include "helpers/StatusLocks.h"
 class StreamReader; //#include "helpers/Stream.h"
 class Process; //#include "helpers/ExternalApp.h"
 class AutoHost; //#include "AutoHost.h"
@@ -13,22 +14,19 @@ class AutoHost; //#include "AutoHost.h"
 enum GameStatus {Setting, PreLobby, Lobby, Load, Run, End, Failed};
 struct TimedMsg{time_t Stamp; char * Msg; Game * SendTo; ~TimedMsg(){if(Msg != NULL) delete Msg;}};
 
-class Game
+class Game : public StatusLocks
 {
 	private:
 		Process * clonk;
 		pthread_t worker;
 		struct{
 			bool SignOn;
-			bool League;
 			bool Record;
-			int LobbyTime;
 			struct {
 				int UDP;
 				int TCP;
 			} Ports;
-			char * Scen;
-			char * PW;
+			ScenarioSet * Scen;
 		} Settings;
 		const char * OutPrefix;
 		GameStatus Status;
@@ -39,7 +37,7 @@ class Game
 		void Control();
 		AutoHost * Parent;
 	public:
-		Game(AutoHost *);
+		Game(AutoHost &);
 		void Start();
 		bool SendMsg(const char *, ...);
 		bool SendMsg(const std::string);
@@ -48,19 +46,20 @@ class Game
 		~Game();
 		GameStatus GetStatus(){return Status;}
 		bool SetScen(const char *);
-		bool SetScen(const ScenarioSet *, bool=true);
+		bool SetScen(const ScenarioSet *);
 		bool SetSignOn(bool signon){if(Status==Setting){Settings.SignOn=signon; return true;} return false;}
-		bool SetLeague(bool league){if(Status==Setting){Settings.League=league; return true;} return false;}
+		bool SetLeague(bool league){if(Status==Setting){Settings.Scen->SetLeague(league?1.f:0.f); return true;} return false;}
 		bool SetPorts(int tcp, int udp){if(Status==Setting){Settings.Ports.TCP=tcp; Settings.Ports.UDP=udp; return true;} return false;}
-		bool SetLobbyTime(int secs){if(Status==Setting){Settings.LobbyTime=secs; return true;} return false;}
-		const char * GetPrefix() const{return OutPrefix;}
-		const char * GetScen() const {return Settings.Scen;}
+		bool SetLobbyTime(int secs){if(Status==Setting){Settings.Scen->SetTime(secs); return true;} return false;}
+		const char * GetPrefix() const {return OutPrefix;}
+		const char * GetPath() const {return Settings.Scen->GetPath();}
 		GameStatus GetStatus() const {return Status;}
+		const ScenarioSet * GetScen() const {return Settings.Scen;}
 		void SendMsg(int, const char *, ...);
 	private:
 		static pthread_t msgtid;
 		static pthread_cond_t msgcond;
-		static pthread_mutex_t foomutex; // I don't even know, why it is there.
+		static pthread_mutex_t foomutex; // I don't even know why it is there.
 		static pthread_mutex_t msgmutex;
 		static std::vector <TimedMsg *> MsgQueue;
 		static bool msg_ready;

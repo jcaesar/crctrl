@@ -56,9 +56,9 @@ class StreamIn /*: private StreamBase */{
 			HANDLE fd_in;
 			DWORD rv; //return value of read()
 		#endif
-		char buffadr [STREAM_MAXCHARS];
+		char buffaddr [STREAM_MAXCHARS];
 		char * buff;
-		char * buffadr2;
+		char * buffaddr2;
 	public:
 		StreamIn();
 		#ifdef unix
@@ -67,12 +67,8 @@ class StreamIn /*: private StreamBase */{
 			StreamIn(HANDLE fd_in);
 		#endif
 		virtual ~StreamIn();
-		bool ReadLine(std::string *, const char [3]);
-		#if defined unix
-			inline bool ReadLine(std::string * line){return(ReadLine(line, "\10\0"));}
-		#elif defined WIN32
-			inline bool ReadLine(std::string * line){return(ReadLine(line, "\13\10"));}
-		#endif
+		bool ReadLine(std::string *);
+		virtual bool StreamIn::ReadFinal();
 		void Close();
 };
 
@@ -86,11 +82,12 @@ class StreamOut /*: private StreamBase */{
 		#elif defined WIN32
 			HANDLE fd_out;
 		#endif
+		virtual bool WriteFinal(const char * msg, int len);
 	public:
 		StreamOut();
 		virtual ~StreamOut();
 		bool Write(const char *, ...);
-		virtual bool WriteList(const char *, va_list);
+		bool WriteList(const char *, va_list &);
 		virtual void Close();
 };
 

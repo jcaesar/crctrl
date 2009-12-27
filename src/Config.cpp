@@ -8,6 +8,7 @@
 #include <mysql++.h>
 #include "helpers/AppManagement.h"
 #include "helpers/StringFunctions.h"
+#include "Control.h"
 
 //Check login definitions
 #if (((!defined DEFAULT_SQL_NAME) || (!defined DEFAULT_SQL_PW) || (!defined DEFAULT_SQL_DB)) && (!defined RUNTIME_LOGIN))
@@ -25,7 +26,7 @@
 
 static Setting Config;
 
-Setting * GetConfig(){
+inline Setting * GetConfig(){
 	return &Config;
 }
 
@@ -33,7 +34,6 @@ Setting::Setting(){
 	SetLoginData(DEFAULT_SQL_NAME, DEFAULT_SQL_PW, DEFAULT_SQL_DB, NULL); Login.addr = NULL;
 	Path = NULL;
 	ConfigPath = NULL;
-	pthread_mutex_init(&mutex, NULL);
 	ScenCount=0;
 	Scens = NULL;
 	BanCount=0;
@@ -42,6 +42,7 @@ Setting::Setting(){
 }
 
 void Setting::Standard(){
+	StatusUnstable();
 	Ports.TCP=11112;
 	Ports.UDP=11113;
 	QueryPort=11110;
@@ -56,6 +57,7 @@ void Setting::Standard(){
 	strcpy(Path, "/usr/games");
 	delete [] ConfigPath;
 	ConfigPath = new char[1];
+	*ConfigPath = 0;
 	if(Bans){
 		Bans += BanCount;
 		while(BanCount--){
@@ -74,18 +76,21 @@ void Setting::Standard(){
 		delete [] Scens;
 		Scens = NULL;
 	}
+	StatusStable();
 }
 
 
 void Setting::SetLoginData(const char * usr, const char * pw, const char * db, const char * addr){
-	if(usr != NULL) Login.usr = usr;
+	StatusUnstable();
+	if(usr != NULL) Login.usr = usr; //Fixme: Copy that.
 	if(pw != NULL) Login.pw = pw;
 	if(db != NULL) Login.db = db;
 	if(addr != NULL) Login.addr = addr;
+	StatusStable();
 }
 
 void Setting::Reload(){
-	pthread_mutex_lock(&mutex);
+	StatusUnstable();
 	Standard();
 	mysqlpp::Connection conn(false);
 	if (conn.connect(Login.db, Login.addr, Login.usr, Login.pw)) {
@@ -120,6 +125,7 @@ void Setting::Reload(){
 		if (mysqlpp::UseQueryResult res = query2.use()) {
 			int cnt = int(res.fetch_row()[0]);
 			while(res.fetch_row());
+			if(cnt == 0) GetOut()->Put(NULL, "Warning: Loading empty scenario list.");
 			mysqlpp::Query query3 = conn.query("SELECT Path, HostChance, LeagueChance, LobbyTime, ScenIndex FROM ScenarioList");
 			if(mysqlpp::UseQueryResult res = query3.use()){
 				Scens = new ScenarioSet * [cnt];
@@ -158,6 +164,8 @@ void Setting::Reload(){
 							}
 						}
 						Scens[cnt]->SetNames(nameptr, namecnt);
+						while(namecnt--) delete [] nameptr[namecnt];
+						delete [] nameptr;
 						Scens[cnt]->Fix();
 					}
 				} else {
@@ -205,7 +213,7 @@ void Setting::Reload(){
 	} else {
 		std::cerr << "DB connection failed: " << conn.error() << std::endl;
 	}
-	pthread_mutex_unlock(&mutex);
+	StatusStable();
 }
 
 const ScenarioSet * Setting::GetScen(int index){
@@ -214,7 +222,8 @@ const ScenarioSet * Setting::GetScen(int index){
 }
 
 const ScenarioSet * Setting::GetScen(){ //Do it by random.
-	if(ScenCount == 0) return NULL; //No Scen = Silly person.
+	LockStatus();
+	if(ScenCount == 0) return NULL; //No Scen = Silly person. This is gonna fail later, I should perhaps error earlier when no scen is given.
 	if(ScenCount == 1) return *Scens;  //One Scen = Bla, that's not gonna segv anymore, so noone testing could be annoyed.
 	srand((unsigned)time(NULL) ^ rand()); 
 	double rnd=fmod((float)rand(), ChanceTotal*16) / 16;
@@ -226,30 +235,138 @@ const ScenarioSet * Setting::GetScen(){ //Do it by random.
 	if(ScenInst >= Scens + ScenCount) { //Hmm, what now? SigKill? Reload? Quit?
 		PanicExit(); //raise(SIGSEGV); //If it did not happen earlier.
 	}
+	UnlockStatus();
 	return (*(ScenInst-1));
 }
 
 ScenarioSet * Setting::GetScen(const char * search){
+	LockStatus();
 	int cnt=ScenCount;
 	ScenarioSet ** ScenInst = Scens;
 	while(cnt--){
 		const char * name;
 		for(int i=0; (name=(*ScenInst)->GetName(i)); i++){
-			if(nocasecmp(search, name)) return *ScenInst;
+			if(nocasecmp(search, name)) {UnlockStatus(); return *ScenInst;}
 		}
 		ScenInst++;
 	}
+	UnlockStatus();
 	return NULL;
 }
 
 const char * Setting::GetBan(const char * name){
+	LockStatus();
 	int cnt = BanCount;
 	BanSet ** BanInst; BanInst = Bans;
 	while(cnt--){
 		if(regex_match(name, *((*BanInst)->NamePattern))){
+			UnlockStatus();
 			return (*BanInst)->Reason;
 		}
 		BanInst++; //Dereferencing with gdb: print (*(((*BanInst)->NamePattern)->m_pimpl.px)).m_expression
 	}
+	UnlockStatus();
 	return NULL;
+}
+
+
+
+ScenarioSet::ScenarioSet(int index) :
+	ScenPath(NULL),
+	ExtraNames(NULL),
+	PW(NULL),
+	NameCount(0),
+	LobbyTime(GetConfig()->LobbyTime),
+	League(GetConfig()->League),
+	Fixed(false),
+	DbIndex(index)
+{}
+
+ScenarioSet::ScenarioSet(ScenarioSet const& base) :
+	ExtraNames (NULL),
+	PW(NULL),
+	NameCount (0),
+	LobbyTime (base.LobbyTime),
+	League (base.League),
+	HostChance (base.HostChance),
+	Fixed(false),
+	DbIndex(base.DbIndex)
+{ //Names and pw will be ignored
+	ScenPath = new char[strlen(base.ScenPath) + 1];
+	strcpy(ScenPath, base.ScenPath);
+}
+
+ScenarioSet::~ScenarioSet(){
+	if(ScenPath) delete [] ScenPath;
+	if(ExtraNames) {
+		while(NameCount--) delete [] ExtraNames[NameCount];
+		delete [] ExtraNames;
+	}
+	if(PW) delete [] PW;
+}
+
+void ScenarioSet::SetPath(const char * path){
+	if(!Fixed) {
+		if(ScenPath) delete [] ScenPath;
+		ScenPath = new char [strlen(path)+1];
+		strcpy(ScenPath, path);
+	}
+}
+
+void ScenarioSet::SetNames(const char * const * names, int count){
+	if(!Fixed) {
+		if(NameCount != 0) {
+			while(NameCount--) delete [] *ExtraNames++;
+			delete [] ExtraNames;
+		}
+		NameCount=count;
+		ExtraNames = new char * [NameCount];
+		while(count--) {
+			ExtraNames[count] = new char [strlen(names[count])+1];
+			strcpy(ExtraNames[count], names[count]);
+		}
+	}
+}
+
+void ScenarioSet::SetPW(const char * pw) {
+	if(!Fixed){
+		if(PW) delete [] PW;
+		PW = new char [strlen(pw) + 1];
+		strcpy(PW, pw);
+	}
+}
+
+void ScenarioSet::SetTime(int time){ if(!Fixed) LobbyTime=time; }
+
+void ScenarioSet::SetChance(float chance){ if(!Fixed) HostChance=chance; }
+
+void ScenarioSet::SetLeague(float chance){ if(!Fixed) League=chance; }
+
+void ScenarioSet::Fix(){ Fixed=true; }
+
+bool ScenarioSet::IsFixed() const {return Fixed; }
+
+const char * ScenarioSet::GetPath() const {return ScenPath; }
+
+int ScenarioSet::GetIndex() const {return DbIndex;}
+
+int ScenarioSet::GetTime() const {return LobbyTime;}
+
+float ScenarioSet::GetLeague() const {return League;}
+
+float ScenarioSet::GetChance() const {return HostChance;}
+
+const char * ScenarioSet::GetPW() const {return PW;}
+
+const char * ScenarioSet::GetName(int index /*=0*/) const {
+	const ScenarioSet * readfrom;
+	if(!ExtraNames && (readfrom=GetConfig()->GetScen(index)));
+	else readfrom = this;
+	if(index < 0 || index >= readfrom->NameCount) return NULL;
+	return *(readfrom->ExtraNames + index);
+}
+
+const bool ScenarioSet::operator==(const ScenarioSet & o){ //Names & PW & HostChance ignored.
+	if(ScenPath && o.ScenPath && !strcmp(ScenPath, o.ScenPath)) return true;
+	else return false;
 }

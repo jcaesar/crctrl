@@ -4,11 +4,12 @@ class AutoHost;
 
 #include <pthread.h>
 #include <vector>
+#include "helpers/StatusLocks.h"
 class Game; //#include "GameControl.h"
 class ScenarioSet; //#include "Config.h"
 
 
-class AutoHost{
+class AutoHost : public StatusLocks {
 	private:
 		const int ID;
 		char * OutPrefix;
@@ -18,7 +19,6 @@ class AutoHost{
 		void Work();
 		unsigned int Fails;
 		bool work;
-		pthread_mutex_t mutex;
 		std::vector <const ScenarioSet*> ScenQueue;
 	public:
 		AutoHost();

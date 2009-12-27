@@ -9,60 +9,69 @@ class StringCollector{
 	private:
 		const char * data;
 		StringCollector * next;
-		bool string_complete;
 		bool delete_data;
 		int length;
 	public:
-		StringCollector(const char * string = NULL) : data(string), next(NULL), string_complete(0), delete_data(false), length(-1) {}
+		StringCollector(const char * string = NULL, bool copy = true) : 
+			data(string), 
+			next(NULL), 
+			delete_data(copy), 
+			length(-1) 
+		{
+			if(copy && string) {
+				char * tmp = new char [strlen(data)+1]; //note on tmp: We don't inflict the const corrrectness with it.
+				strcpy(tmp, string);
+				data = tmp;
+			}
+		}
 		~StringCollector() {
 			if(next != NULL) delete next;
-			if(string_complete || delete_data) delete [] data;
+			if(delete_data) delete [] data;
 		}
 		int GetLength(bool renew = false){
 			if(length == -1 || renew) {
 				length = 0;
-				if(data) length += strlen(data);
-				if(next) length += next->GetLength();
+				for(StringCollector * itr = this; itr; itr = itr->next)
+					if(itr->data) length += strlen(itr->data);
 			}
 			return length;
 		}
 		const char * GetBlock(){
-			if(!string_complete){
+			if(next) {
 				int len=GetLength();
 				char * temp = new char[len+1];
 				char * jump; jump = temp;
-				StringCollector * itr; itr=this;
-				while(itr){
+				for(StringCollector * itr = this; itr; itr = itr->next){
 					if(itr->data) {
 						strcpy(jump, itr->data);
 						jump += strlen(itr->data);
 					}
-					itr = itr->next;
 				}
+				if(delete_data) delete [] data;
 				data = temp;
+				delete_data = true;
 				if(next) {
 					delete next;
 					next = NULL;
 				}
-				length = GetLength(true);
-				string_complete = true;
 			}
 			return data;
 		}
-		bool Push(const char * push){
-			if(push == NULL || string_complete) return false;
-			if(next) return next->Push(push);
-			next = new StringCollector(push);
+		bool Push(const char * push, bool copy = true){
+			if(push == NULL) return false;
+			StringCollector * pushto = this;
+			while(pushto->next) pushto=pushto->next;
+			pushto->next = new StringCollector(push, copy);
 			length = -1;
 			return true;
 		}
 		bool Push(const int push){
-			if(string_complete) return false;
-			if(next) return next->Push(push);
+			StringCollector * pushto = this;
+			while(pushto->next) pushto=pushto->next;
 			char * tmp = new char[11];
 			sprintf(tmp, "%d", push);
-			next = new StringCollector(tmp);
-			next -> delete_data = true;
+			pushto = new StringCollector(tmp);
+			delete [] tmp;
 			length = -1;
 			return true;
 		}

@@ -70,11 +70,17 @@ void UserControl::Work(){
 
 void UserControl::PrintStatus(AutoHost * stat /*= NULL*/){
 	if(GetAutoHosts()->Exists(stat)) {
-		if(stat->GetGame()) Out.Put(this, stat->GetPrefix(), " ", stat->GetGame()->GetScen(), NULL); //FIXME: This is not thread-safe.
+		stat->LockStatus();
+		if(stat->GetGame()) Out.Put(this, stat->GetPrefix(), " ", (stat->GetGame())->GetScen()->GetName(), NULL); //FIXME: This is not thread-safe.
 		else Out.Put(this, stat->GetPrefix(), " currently empty.", NULL);
+		stat->UnlockStatus();
 	} else {
 		int i=0;
-		while(AutoHost * ah = GetAutoHosts()->Get(i++)) PrintStatus(ah);
+		while(AutoHost * ah = GetAutoHosts()->Get(i++)) {
+			ah->LockStatus();
+			PrintStatus(ah);
+			ah->UnlockStatus();
+		}
 	}
 }
 
@@ -123,10 +129,10 @@ bool OutprintControl::Remove(UserControl * ctrl){
 void OutprintControl::Put(void * context, const char * first, ...){
 	va_list vl;
 	va_start(vl, first);
-	StringCollector msg(first);
+	StringCollector msg(first, false);
 	const char * str;
 	while((str = va_arg(vl, const char *)))
-		msg.Push(str);
+		msg.Push(str, false);
 	bool endlbr = true;
 	if(*(msg.GetBlock() + msg.GetLength() - 1) == '\n') endlbr = false;
 	pthread_mutex_lock(&mutex);

@@ -10,44 +10,49 @@
 	//ReadFile and WriteFile have Differing arguments
 #endif
 
-StreamIn::StreamIn() : fd_in(NULL), rv(0), buff(buffadr) {}
+StreamIn::StreamIn() : fd_in(NULL), rv(0), buff(buffaddr) {}
 
 #ifdef unix
-	StreamIn::StreamIn(int fd) : fd_in(fd), rv(0), buff(buffadr) {}
+	StreamIn::StreamIn(int fd) : fd_in(fd), rv(0), buff(buffaddr) {}
 #elif defined win32
-	StreamIn::StreamIn(HANDLE fd) : fd_in(fd), rv(0), buff(buffadr) {}
+	StreamIn::StreamIn(HANDLE fd) : fd_in(fd), rv(0), buff(buffaddr) {}
 #endif
 
 StreamIn::~StreamIn(){
 	Close();
 }
 
-bool StreamIn::ReadLine(std::string * line, const char delim [2]){
+bool StreamIn::ReadLine(std::string * line){
 	std::stringstream ss;
 	do{
-		if(buffadr+rv > buff){ //I left things behind, last time.
-			buffadr2=buff;
-			while(*buff && !strcmp(buff,delim)) buff++;
-			if(strcmp(buff,delim)){ //This is the case, when there was a completed line found.
+		if(buffaddr+rv > buff){ //I left things behind, last time.
+			buffaddr2=buff;
+			while(*buff && *buff != '\r' && *buff != '\n') buff++;
+			if(*buff == '\r' || *buff == '\n'){ //This is the case, when there was a completed line found.
 				*buff=0;
 				buff++;
-				ss << buffadr2;
+				if((buff - buffaddr < STREAM_MAXCHARS) && (*buff == '\r' || *buff == '\n') && *buff != *(buff-1)) buff++; //This will ignore a secondary newline character coming from windows (or a wierd \n\r newline) (But it won't ignore \n\n)
+				ss << buffaddr2;
 				break;
 			}
-			ss << buffadr2;
+			ss << buffaddr2;
 		}
-		buff = buffadr;
-		#ifdef unix
-		if((rv = read(fd_in, buff, STREAM_MAXCHARS-1)) <= 0) 
-		#elif WIN32
-		if(!ReadFile(fd_in, buff, STREAM_MAXCHARS-1, &rv, NULL) || rv==0)
-		#endif
+		buff = buffaddr;
+		if(!ReadFinal())
 		{
-			Close();
-			*line = ss.str();
+			#ifdef WIN32
+				if(GetLastError() != ERROR_BROKEN_PIPE) throw "Something bad happend with a pipe";
+			#elif defined unix
+				Close();
+			#endif
+			try {
+				*line = ss.str();
+			} catch (...) {
+				*line = "";
+			}
 			return false;
 		}
-		buff = buffadr;
+		buff = buffaddr;
 		*(buff+rv)=0;
 	} while(*buff!=0);
 	*line = ss.str();
@@ -55,8 +60,19 @@ bool StreamIn::ReadLine(std::string * line, const char delim [2]){
 }
 
 void StreamIn::Close() {
-	if(fd_in) close(fd_in);
+	try {
+		if(fd_in) close(fd_in);
+	} catch (...) {}
 }
+
+bool StreamIn::ReadFinal() {
+	#ifdef unix
+		return((rv = read(fd_in, buff, STREAM_MAXCHARS-1)) > 0);
+	#elif WIN32
+		return(ReadFile(fd_in, buff, STREAM_MAXCHARS-1, &rv, NULL) || rv>0);
+	#endif
+}
+
 
 
 StreamOut::StreamOut() : fd_out(NULL) {}
@@ -74,22 +90,29 @@ bool StreamOut::Write(const char * first, ...){
 	return true;
 }
 
-bool StreamOut::WriteList(const char * first, va_list vl){
+bool StreamOut::WriteList(const char * first, va_list & vl){
 	if(!fd_out) return false;
 	StringCollector msg;
+	msg.Push(first, false);
 	const char * str;
-	while((str = va_arg(vl, const char *))) msg.Push(str);
-	msg.GetBlock();
+	while((str = va_arg(vl, const char *))) msg.Push(str, false);
+	if(*(msg.GetBlock()+msg.GetLength()-1) != '\r' && *(msg.GetBlock()+msg.GetLength()-1) != '\n') msg.Push("\n");
+	return WriteFinal(msg.GetBlock(), msg.GetLength());
+}
+
+bool StreamOut::WriteFinal(const char * msg, int len){
 	#ifdef unix
-		return (write(fd_out, msg.GetBlock(), msg.GetLength())==msg.GetLength());
+		return (write(fd_out, msg, len)==len);
 	#elif WIN32
 		DWORD br;
-		return(WriteFile(fd_out, msg.GetBlock(), msg.GetLength(), &br, NULL) && br==msg.GetLength());
+		return(WriteFile(fd_out, msg, len, &br, NULL) && br==len);
 	#endif
 }
 
 void StreamOut::Close() {
-	if(fd_out) close(fd_out);
+	try {
+		if(fd_out) close(fd_out);
+	} catch (...) {}
 }
 
 

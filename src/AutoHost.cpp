@@ -16,10 +16,9 @@ AutoHostList * GetAutoHosts(){
 #ifdef _MSC_VER
 	#pragma warning (disable: 4355)
 #endif
-AutoHost::AutoHost() : ID(AutoHosts.Add(this)), Fails(0), work(true) {
+AutoHost::AutoHost() : ID(AutoHosts.Add(this)), CurrentGame(NULL), Fails(0), work(true) {
 	OutPrefix = new char[11];
 	sprintf(OutPrefix, "a#%d", ID);
-	pthread_mutex_init(&mutex, NULL);
 	pthread_create(&tid, NULL, &AutoHost::ThreadWrapper, this);
 }
 
@@ -29,22 +28,20 @@ void AutoHost::SoftEnd(bool wait /*= true*/){
 }
 
 AutoHost::~AutoHost(){
-	AutoHosts.Remove(this);
+	StatusUnstable();
 	work = false;
-	pthread_mutex_lock(&mutex); //onkel phlox hat gesagt: try{...}catch(DeadLockException& e){cout << "so einfach ist das" << endl; e.unlock();}
+	AutoHosts.Remove(this);
 	delete CurrentGame;
 	CurrentGame = NULL;
-	pthread_mutex_unlock(&mutex);
 	if(!pthread_equal(pthread_self(),tid)) pthread_join(tid, NULL); //And my own thread will end when all that is done. 
-	pthread_mutex_destroy(&mutex);
 	GetOut()->Put(NULL, OutPrefix, " Terminated.", NULL);
 	delete OutPrefix;
 }
 
 void AutoHost::Work(){
 	GetOut()->Put(NULL, OutPrefix, " New AutoHost working!", NULL);
-	const ScenarioSet * scn; const ScenarioSet * lastscn; bool del, delnow;
-	pthread_mutex_lock(&mutex);
+	const ScenarioSet * scn = NULL; const ScenarioSet * lastscn; bool del = true, delnow;
+	StatusUnstable();
 	while(work){
 		lastscn = scn;
 		delnow = del;
@@ -54,15 +51,16 @@ void AutoHost::Work(){
 		} else {
 			try {scn = ScenQueue.at(0);} //Vector sux, dunno why.
 			catch (...) {continue;}
-			ScenQueue.erase(ScenQueue.begin());
+			ScenQueue.erase(ScenQueue.begin()); 
 		}
 		if(Fails && scn == lastscn) continue;
 		if(delnow) delete lastscn;
-		CurrentGame = new Game(this);
+		CurrentGame = new Game(*this);
 		CurrentGame -> SetScen(scn);
-		pthread_mutex_unlock(&mutex);
-		CurrentGame -> Start(); //This blocks, until the game is over.´
-		if(!work || pthread_mutex_trylock(&mutex) == EBUSY) break;
+		StatusStable();
+		CurrentGame -> Start(); //This blocks, until the game is over.
+		StatusUnstable();
+		if(!work) break;
 		if(CurrentGame -> GetStatus() == Failed) {
 			Fails++;
 			if(Fails >= GetConfig()->MaxExecTrials) {
@@ -71,9 +69,12 @@ void AutoHost::Work(){
 				break;
 			}
 		} else Fails = 0;
+		if(CurrentGame -> GetStatus() > Lobby) {
+			Enqueue(CurrentGame->GetScen());
+		}
 		delete CurrentGame;
 	}
-	pthread_mutex_unlock(&mutex);  //"[EPERM] - The current thread does not hold a lock on mutex." (No need to handle.)
+	StatusUnstable();
 }
 
 Game * AutoHost::GetGame(){
@@ -81,13 +82,13 @@ Game * AutoHost::GetGame(){
 }
 
 bool AutoHost::Enqueue(const ScenarioSet * scn){
-	pthread_mutex_lock(&mutex);
+	StatusUnstable();
 	if(ScenQueue.size() >= GetConfig()->MaxQueueSize){
-		pthread_mutex_unlock(&mutex);
+		StatusStable();
 		return false; //What about some kind of errno?
 	}
 	ScenQueue.push_back(scn);
-	pthread_mutex_unlock(&mutex);
+	StatusStable();
 	return true;
 }
 
