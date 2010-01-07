@@ -11,8 +11,8 @@
 #include "Control.h"
 
 //Check login definitions
-#if (((!defined DEFAULT_SQL_NAME) || (!defined DEFAULT_SQL_PW) || (!defined DEFAULT_SQL_DB)) && (!defined RUNTIME_LOGIN))
-	#error "You tricked your build system, eh?"
+#if (((!defined DEFAULT_SQL_NAME) || (!defined DEFAULT_SQL_PW) || (!defined DEFAULT_SQL_DB) || (!defined DEFAULT_SQL_ADDR)) && (!defined RUNTIME_LOGIN))
+	#error "You tricked your build system, eh? Go and re-cmake!"
 #endif
 #ifndef DEFAULT_SQL_NAME
 	#define DEFAULT_SQL_NAME "crctrl"
@@ -23,6 +23,9 @@
 #ifndef DEFAULT_SQL_DB
 	#define DEFAULT_SQL_DB "crctrl"
 #endif
+#ifndef DEFAULT_SQL_ADDR
+	#define DEFAULT_SQL_ADDR NULL
+#endif
 
 static Setting Config;
 
@@ -31,7 +34,7 @@ inline Setting * GetConfig(){
 }
 
 Setting::Setting(){
-	SetLoginData(DEFAULT_SQL_NAME, DEFAULT_SQL_PW, DEFAULT_SQL_DB, NULL); Login.addr = NULL;
+	Login.addr = NULL; SetLoginData(DEFAULT_SQL_NAME, DEFAULT_SQL_PW, DEFAULT_SQL_DB, DEFAULT_SQL_ADDR);
 	Path = NULL;
 	ConfigPath = NULL;
 	ScenCount=0;
