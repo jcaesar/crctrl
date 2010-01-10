@@ -32,4 +32,6 @@ namespace rx{
 	//[20:56:35] Spieler Test0r eliminiert.
 	static boost::regex cm_base		("^\\[[0-9]{2}:[0-9]{2}:[0-9]{2}\\] <(.*)> %([^ ]+)( (.*))?$");
 	//
+	static boost::regex ms_flood	("^\\[[0-9]{2}:[0-9]{2}:[0-9]{2}\\] Spiel konnte nicht registriert werden: Zu viele Versuche, ein Spiel zu starten$");
+	//[03:07:27] Spiel konnte nicht registriert werden: Zu viele Versuche, ein Spiel zu starten
 }
