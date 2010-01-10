@@ -3,30 +3,27 @@
 
 #include <pthread.h>
 
+//Note: Ihateyouihateyouihateyou. 
+//I just can't figure out how to build it that it will allow what I want it to do, without allocating memory in LockStatus-Calls
+//I should better implement the fast version. Collisions won't appear for my code anyway, so this is a lot slower than it could be.
+
 class StatusLocks {
 	private:
 		pthread_mutex_t statuslock;
-		pthread_mutex_t statuslocklock;
-		unsigned int lockcount; //positive for read locks, not used with write locks
+		pthread_cond_t statuscond;
+		struct ReaderInfo {
+			pthread_t thread;
+			unsigned int count;
+			ReaderInfo * next;
+		} readerinfo;
+		unsigned int writercount;
+		pthread_t writer;
 	protected:
-		inline void StatusUnstable() {
-			pthread_mutex_lock(&statuslock);
-		}
-		inline void StatusStable()  {
-			pthread_mutex_unlock(&statuslock);
-		}
+		void StatusUnstable();
+		void StatusStable();
 	public:
-		inline void LockStatus() {
-			pthread_mutex_lock(&statuslocklock);
-			if(!lockcount) pthread_mutex_lock(&statuslock);
-			lockcount++;
-			pthread_mutex_unlock(&statuslocklock);
-		}
-		inline void UnlockStatus() {
-			pthread_mutex_lock(&statuslocklock);
-			if(!--lockcount) pthread_mutex_unlock(&statuslock);
-			pthread_mutex_unlock(&statuslocklock);
-		}
+		void LockStatus();
+		void UnlockStatus();
 		StatusLocks();
 		~StatusLocks();
 };

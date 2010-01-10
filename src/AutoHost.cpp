@@ -69,7 +69,7 @@ void AutoHost::Work(){
 				break;
 			}
 		} else Fails = 0;
-		if(CurrentGame -> GetStatus() > Lobby) {
+		if(CurrentGame->GetStatus() > Lobby && CurrentGame->GetStatus() != Failed) {
 			Enqueue(CurrentGame->GetScen());
 		}
 		delete CurrentGame;
@@ -96,6 +96,17 @@ void * AutoHost::ThreadWrapper(void * p){
 	static_cast<AutoHost*>(p)->AutoHost::Work();
 	return NULL;
 }
+
+void AutoHost::LockStatus() {
+	CurrentGame->LockStatus();
+	StatusLocks::LockStatus();
+}
+
+void AutoHost::UnlockStatus() {
+	CurrentGame->UnlockStatus();
+	StatusLocks::UnlockStatus();
+}
+
 
 AutoHostList::AutoHostList(){
 	Index = 0;
@@ -148,13 +159,19 @@ bool AutoHostList::GameExists(Game * find){
 	return false;
 }
 
-bool AutoHostList::Exists(AutoHost * find){
+bool AutoHostList::Exists(void * find){
 	if(!find) return false;
 	int i=Instances.size();
 	while(i--){
 		if(Instances[i]==find) return true;
 	}
 	return false;
+}
+
+bool AutoHostList::CatchAndLock(void * find){
+	if(!Exists(find)) return false;
+	static_cast<AutoHost*>(find)->LockStatus(); //FIXME: this is dirty, because it could disappear after having found it
+	return true;
 }
 
 

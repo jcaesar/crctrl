@@ -35,7 +35,7 @@ void UserControl::Work(){
 	std::string cmd;
 	while(conn->ReadLine(&cmd)){
 		if(!cmd.compare("%auto")) {
-			new AutoHost();
+			sel = new AutoHost(); //Note that sel is not a permanent saving var.
 		} else if(!cmd.compare("%end")) {
 			GetAutoHosts()->DelAll();
 			exit(0);
@@ -59,9 +59,12 @@ void UserControl::Work(){
 		} else if(startswith(&cmd,"%")){
 			Out.Put(this, "No such command: ", cmd.data(), NULL);
 		} else {
-			if(GetAutoHosts()->Exists(sel) && sel->GetGame()) {
-				cmd += "\n";
-				sel->GetGame()->SendMsg(cmd.c_str(), NULL);
+			if(GetAutoHosts()->CatchAndLock(sel)) {
+				if(sel->GetGame()) {
+					cmd += "\n";
+					sel->GetGame()->SendMsg(cmd.c_str(), NULL);
+				}
+				sel->UnlockStatus();
 			}
 		}
 	}
@@ -71,7 +74,7 @@ void UserControl::Work(){
 void UserControl::PrintStatus(AutoHost * stat /*= NULL*/){
 	if(GetAutoHosts()->Exists(stat)) {
 		stat->LockStatus();
-		if(stat->GetGame()) Out.Put(this, stat->GetPrefix(), " ", (stat->GetGame())->GetScen()->GetName(), NULL); //FIXME: This is not thread-safe.
+		if(stat->GetGame()) Out.Put(this, stat->GetPrefix(), " ", (stat->GetGame())->GetScen()->GetName(), NULL);
 		else Out.Put(this, stat->GetPrefix(), " currently empty.", NULL);
 		stat->UnlockStatus();
 	} else {

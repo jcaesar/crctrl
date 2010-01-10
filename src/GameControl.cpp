@@ -13,7 +13,6 @@
 
 pthread_t Game::msgtid;
 pthread_cond_t Game::msgcond;
-pthread_mutex_t Game::foomutex;
 pthread_mutex_t Game::msgmutex;
 std::vector <TimedMsg *> Game::MsgQueue;
 bool Game::msg_ready;
@@ -37,7 +36,6 @@ Game::Game(AutoHost & parent) :
 
 void Game::Init() {
 	if(msg_ready) return;
-	pthread_mutex_init(&foomutex, NULL); //Deleted in MsgQueue
 	pthread_mutex_init(&msgmutex, NULL);
 	pthread_cond_init(&msgcond, NULL);   // -"-
 	pthread_create(&msgtid, NULL, &Game::MsgTimer, NULL);
@@ -98,10 +96,6 @@ void Game::Start(){
 	cmd += " \"";
 	cmd += Settings.Scen->GetPath();
 	cmd += "\"";
-	Start(cmd.GetBlock());
-}
-
-void Game::Start(const char * args){
 	StatusUnstable();
 	worker = pthread_self();
 	if(clonk) delete clonk;
@@ -109,10 +103,11 @@ void Game::Start(const char * args){
 	char * fullpath = new char[strlen(GetConfig()->Path) + 7];
 	strcpy(fullpath, GetConfig()->Path);
 	strcpy(fullpath+strlen(GetConfig()->Path), "clonk");
-	clonk -> SetArguments(fullpath, args);
+	clonk -> SetArguments(fullpath, cmd.GetBlock(), GetConfig()->Path);
 	delete [] fullpath;
-	StatusStable();
 	if(!clonk -> Start()) Fail();
+	Status = PreLobby;
+	StatusStable();
 	if(!msg_ready) Init();
 	Control();
 }
@@ -292,7 +287,6 @@ void Game::Deinit(){
 	pthread_cond_signal(&msgcond);
 	pthread_join(msgtid, NULL);
 	pthread_cond_destroy(&msgcond);
-	pthread_mutex_destroy(&foomutex);
 	pthread_mutex_destroy(&msgmutex);
 }
 
@@ -314,7 +308,9 @@ bool Game::Fail(){
 }
 
 bool Game::SendMsg(const char * first, ...){
-	if(!clonk->IsRunning() || (Status != Lobby && Status != Run)) return false;
+	StatusUnstable();
+	if(!clonk || !clonk->IsRunning() || (Status != Lobby && Status != Run)) {StatusStable(); return false;}
+	StatusStable();
 	va_list vl;
 	va_start(vl, first);
 	bool ret;
@@ -345,7 +341,9 @@ void Game::SendMsg(int secs, const char * first, ...){
 		tmsg->Msg = new char[msg.GetLength()+1]; //Deleted in D'tor of struct TimedMsg
 		strcpy(tmsg->Msg,msg.GetBlock());
 		tmsg->SendTo = this;
-		MsgQueue.push_back(tmsg); //No need to lock here.
+		pthread_mutex_lock(&msgmutex);
+		MsgQueue.push_back(tmsg);
+		pthread_mutex_unlock(&msgmutex);
 		if(msg_ready) pthread_cond_signal(&msgcond); //Update
 	} else {
 		SendMsg(msg.GetBlock());
@@ -357,18 +355,17 @@ bool Game::SendMsg(const std::string msg){
 }
 
 void * Game::MsgTimer(void * foo){
-	pthread_mutex_lock(&foomutex); //Whyever.
+	pthread_mutex_lock(&msgmutex); //Whyever.
 	time_t nextevent = 0;
 	while(true){
 		if(MsgQueue.size() > 0) {
 			timespec ts;
 			ts.tv_sec = (long)nextevent; 
-			pthread_cond_timedwait(&msgcond, &foomutex, &ts);
-		} else pthread_cond_wait(&msgcond, &foomutex);
+			pthread_cond_timedwait(&msgcond, &msgmutex, &ts);
+		} else pthread_cond_wait(&msgcond, &msgmutex);
 		if(!msg_ready) 
 			break;
 		nextevent=0;
-		pthread_mutex_lock(&msgmutex);
 		int i=MsgQueue.size(); while(i-->0){
 			if(MsgQueue[i]->Stamp <= time(NULL)){
 				(MsgQueue[i]->SendTo)->SendMsg(MsgQueue[i]->Msg, NULL);
@@ -380,7 +377,7 @@ void * Game::MsgTimer(void * foo){
 		}
 		pthread_mutex_unlock(&msgmutex);
 	}
-	pthread_mutex_unlock(&foomutex);
+	pthread_mutex_unlock(&msgmutex);
 	return NULL;
 }
 

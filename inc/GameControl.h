@@ -59,7 +59,6 @@ class Game : public StatusLocks
 	private:
 		static pthread_t msgtid;
 		static pthread_cond_t msgcond;
-		static pthread_mutex_t foomutex; // I don't even know why it is there.
 		static pthread_mutex_t msgmutex;
 		static std::vector <TimedMsg *> MsgQueue;
 		static bool msg_ready;

@@ -8,6 +8,7 @@ class Process : public Stream {
 		enum { PreRun, Active, Stopped } Status;
 		char * path;
 		char * args;
+		char * dir;
 		#if defined unix
 			pid_t pid;
 		#elif defined WIN32
@@ -16,7 +17,7 @@ class Process : public Stream {
 	public:
 		Process();
 		~Process();
-		bool SetArguments(const char * path, const char * args);
+		bool SetArguments(const char * path, const char * args, const char * dir);
 		bool Start();
 		bool Kill(bool brutal = false);
 		bool Wait(bool block = true);

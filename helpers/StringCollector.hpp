@@ -70,13 +70,13 @@ class StringCollector{
 			while(pushto->next) pushto=pushto->next;
 			char * tmp = new char[11];
 			sprintf(tmp, "%d", push);
-			pushto = new StringCollector(tmp);
+			pushto->next = new StringCollector(tmp);
 			delete [] tmp;
 			length = -1;
 			return true;
 		}
-		StringCollector& operator+=(const char * push){Push(push); return *this;}
-		StringCollector& operator+=(const int push)   {Push(push); return *this;}
+		inline StringCollector& operator+=(const char * push){Push(push); return *this;}
+		inline StringCollector& operator+=(const int push)   {Push(push); return *this;}
 };
 
 #endif

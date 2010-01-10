@@ -28,6 +28,8 @@ class AutoHost : public StatusLocks {
 		int GetID(){return ID;}
 		const char * GetPrefix(){return OutPrefix;}
 		void SoftEnd(bool = true);
+		void LockStatus();
+		void UnlockStatus();
 };
 
 class AutoHostList{
@@ -44,7 +46,8 @@ class AutoHostList{
 		AutoHost * FindByGame(Game *);
 		AutoHost * Find(int);
 		bool GameExists(Game *);
-		bool Exists(AutoHost *);
+		bool Exists(void *);
+		bool CatchAndLock(void *);
 };
 
 AutoHostList * GetAutoHosts();

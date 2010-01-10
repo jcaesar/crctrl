@@ -14,7 +14,7 @@
 	#pragma comment(lib, "Ws2_32.lib")
 #endif
 
-Process::Process() : Status(PreRun), path(NULL), args(NULL) {
+Process::Process() : Status(PreRun), path(NULL), args(NULL), dir(NULL) {
 	#ifdef unix
 		pid = 0;
 	#elif defined WIN32
@@ -28,7 +28,7 @@ Process::~Process() {
 	delete [] path;
 }
 
-bool Process::SetArguments(const char * spath, const char * sargs) {
+bool Process::SetArguments(const char * spath, const char * sargs, const char * sdir) {
 	if(Status != PreRun || (!spath && !sargs)) return false;
 	if(spath) {
 		if(path) delete [] path;
@@ -43,6 +43,11 @@ bool Process::SetArguments(const char * spath, const char * sargs) {
 		args = new char [strlen(sargs)+1];
 		strcpy(args, sargs);
 	}
+	if(sdir) {
+		if(dir) delete [] dir;
+		dir = new char [strlen(sdir)+1];
+		strcpy(dir, sdir);
+	}
 	return true;
 }
 
@@ -56,7 +61,7 @@ bool Process::Start() {
 		pid_t child;
 		if ( (pipe(fd1) < 0) || (pipe(fd2) < 0) /*|| (pipe(fderr) < 0)*/ || (pipe(fdtmp) < 0) ) return false;
 		child = fork();
-		if(child < 0) return false;
+		if(child < 0) throw "Could not fork.";
 		if(child == 0){
 			close(fdtmp[0]);
 			child = fork();
@@ -66,23 +71,25 @@ bool Process::Start() {
 				close(fd2[0]);
 				//close(fderr[0]);
 				if (fd1[0] != STDIN_FILENO){
-					//if (dup2(fd1[0], STDIN_FILENO) != STDIN_FILENO) err
+					if (dup2(fd1[0], STDIN_FILENO) != STDIN_FILENO) close(STDIN_FILENO);
 					close(fd1[0]);
 				}
 				if (fd2[1] != STDOUT_FILENO){
-					//if (dup2(fd2[1], STDOUT_FILENO) != STDOUT_FILENO) err
+					if (dup2(fd2[1], STDOUT_FILENO) != STDOUT_FILENO) close(STDOUT_FILENO); //FIXME: close() is a very bad error handling
 					close(fd2[1]);
 				}
 				/*if (fderr[1] != STDERR_FILENO){
 					//if (dup2(fderr[1], STDERR_FILENO) != STDERR_FILENO) err
 					close(fderr[1]);
 				}*/
-
-				execl(path, args, NULL);
+				close(STDERR_FILENO);
+				if(dir) chdir(dir);
+				execl(path, "", args, NULL);
 				//When execl does fine, it will never return.
 				close(fd1[0]);
 				close(fd2[1]);
 				//close(fderr[1]);
+				raise(SIGKILL);
 			}
 			char pidchr [12];
 			sprintf(pidchr, "%d\n", child);
