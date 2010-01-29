@@ -5,7 +5,9 @@
 #include <sstream>
 #include "StringCollector.hpp"
 
-#ifdef WIN32
+#ifdef unix
+	#include <errno.h>
+#elif defined WIN32
 	#define close CloseHandle
 	//ReadFile and WriteFile have Differing arguments
 #endif
@@ -67,7 +69,9 @@ void StreamIn::Close() {
 
 bool StreamIn::ReadFinal() {
 	#ifdef unix
-		return((rv = read(fd_in, buff, STREAM_MAXCHARS-1)) > 0);
+		do rv = read(fd_in, buff, STREAM_MAXCHARS-1);
+		while(rv == -1 && errno == EINTR);
+		return(rv > 0);
 	#elif WIN32
 		return(ReadFile(fd_in, buff, STREAM_MAXCHARS-1, &rv, NULL) || rv>0);
 	#endif
@@ -102,7 +106,10 @@ bool StreamOut::WriteList(const char * first, va_list & vl){
 
 bool StreamOut::WriteFinal(const char * msg, int len){
 	#ifdef unix
-		return (write(fd_out, msg, len)==len);
+		int rv;
+		do rv=write(fd_out, msg, len);
+		while(rv==-1 && errno != EINTR);
+		return (rv==len);
 	#elif WIN32
 		DWORD br;
 		return(WriteFile(fd_out, msg, len, &br, NULL) && br==len);

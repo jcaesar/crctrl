@@ -31,7 +31,7 @@ Process::~Process() {
 bool Process::SetArguments(const char * spath, const char * sargs, const char * sdir) {
 	if(Status != PreRun || (!spath && !sargs)) return false;
 	if(spath) {
-		if(path) delete [] path;
+		delete [] path;
 		path = new char [strlen(spath)+1];
 		strcpy(path, spath);
 		#ifdef WIN32
@@ -39,12 +39,12 @@ bool Process::SetArguments(const char * spath, const char * sargs, const char * 
 		#endif
 	}
 	if(sargs) {
-		if(args) delete [] args;
+		delete [] args;
 		args = new char [strlen(sargs)+1];
 		strcpy(args, sargs);
 	}
 	if(sdir) {
-		if(dir) delete [] dir;
+		delete [] dir;
 		dir = new char [strlen(sdir)+1];
 		strcpy(dir, sdir);
 	}

@@ -2,6 +2,8 @@
 #include "GameControl.h"
 
 #include <stdarg.h>
+#include <signal.h>
+#include <errno.h>
 #include <boost/regex.hpp>
 #include "helpers/StringCollector.hpp"
 #include "helpers/AppManagement.h"
@@ -35,12 +37,14 @@ Game::Game(AutoHost & parent) :
 }
 
 void Game::Init() {
-	if(msg_ready) return;
-	pthread_mutex_init(&msgmutex, NULL);
-	pthread_cond_init(&msgcond, NULL);   // -"-
-	pthread_create(&msgtid, NULL, &Game::MsgTimer, NULL);
-	msg_ready = true;
-	//msgtid=NULL; FIXME: Understand, why that line was here...
+	#ifndef NO_GAME_TIMED_MSGS
+		if(msg_ready) return;
+		pthread_mutex_init(&msgmutex, NULL);
+		pthread_cond_init(&msgcond, NULL);   // -"-
+		pthread_create(&msgtid, NULL, &Game::MsgTimer, NULL);
+		msg_ready = true;
+		//msgtid=NULL; FIXME: Understand, why that line was here...
+	#endif
 }
 
 bool Game::SetScen(const char * path){ //DEPRECATED
@@ -98,7 +102,7 @@ void Game::Start(){
 	cmd += "\"";
 	StatusUnstable();
 	worker = pthread_self();
-	if(clonk) delete clonk;
+	delete clonk;
 	clonk = new Process();
 	char * fullpath = new char[strlen(GetConfig()->Path) + 7];
 	strcpy(fullpath, GetConfig()->Path);
@@ -229,6 +233,9 @@ void Game::Control(){
 				SendMsg("Wie die Fliegen, wie die Fliegen. Pass das naechste mal besser auf, ", regex_ret[1].str().data(), ", du Tropf.\n.", NULL);
 			} else if(regex_match(line, rx::gm_tick0)){
 				SendMsg("/me r0kt!\n", NULL);
+				#ifdef NO_GAME_TIMED_MSGS
+					Halt(10);
+				#endif
 				SendMsg(20, "/set maxplayer 1\n", NULL);
 			}
 		} else if(Status==Load) {
@@ -245,7 +252,7 @@ void Game::Control(){
 			}
 			if(regex_match(line, rx::ms_flood)) {
 				GetOut()->Put(Parent, OutPrefix, " Masterserver complained about too much games from this IP.");
-				sleep(300);
+				Halt(300);
 				Fail();
 			}
 		}
@@ -263,6 +270,7 @@ void Game::Exit(bool soft /*= true*/, bool wait /*= true*/){
 	cleanup = true;
 	if(soft) {if(clonk) clonk->ClosePipeTo();}
 	else {if(clonk) clonk->Kill();}
+	//if(pthread_kill(msgtid, 0) == ESRCH) Deinit(); //This looks like an ugly hack, but the manpage says, kill sends signals, and 0 sends no signal, just tests.
 	pthread_mutex_lock(&msgmutex);
 	int i=MsgQueue.size(); 
 	while(i-->0)
@@ -283,7 +291,6 @@ Game::~Game(){
 	if(clonk) clonk->Wait(false);
 	delete clonk;
 	if(Settings.Scen) delete Settings.Scen;
-	pthread_cancel(msgtid);
 }
 
 void Game::Deinit(){
@@ -293,6 +300,7 @@ void Game::Deinit(){
 	pthread_join(msgtid, NULL);
 	pthread_cond_destroy(&msgcond);
 	pthread_mutex_destroy(&msgmutex);
+	MsgQueue.resize(0);
 }
 
 bool Game::Fail(){
@@ -330,6 +338,7 @@ bool Game::SendMsg(const char * first, ...){
 void Game::SendMsg(int secs, const char * first, ...){
 	if(cleanup) return;
 	time_t stamp = time(NULL) + secs; //Conserv
+	if(!msg_ready) Init();
 	va_list vl;
 	va_start(vl, first);
 	StringCollector msg(first, false);
@@ -340,19 +349,23 @@ void Game::SendMsg(int secs, const char * first, ...){
 	msg.GetBlock(); 
 	va_end(vl);
 	//pthread_mutex_lock(&mutex);
-	if(msg_ready){
-		TimedMsg * tmsg = new TimedMsg; //Deleted in Game::MsgTimer
-		tmsg->Stamp = stamp;
-		tmsg->Msg = new char[msg.GetLength()+1]; //Deleted in D'tor of struct TimedMsg
-		strcpy(tmsg->Msg,msg.GetBlock());
-		tmsg->SendTo = this;
-		pthread_mutex_lock(&msgmutex);
-		MsgQueue.push_back(tmsg);
-		pthread_mutex_unlock(&msgmutex);
-		if(msg_ready) pthread_cond_signal(&msgcond); //Update
-	} else {
+	#ifndef NO_GAME_TIMED_MSGS
+		if(msg_ready){
+			TimedMsg * tmsg = new TimedMsg; //Deleted in Game::MsgTimer
+			tmsg->Stamp = stamp;
+			tmsg->Msg = new char[msg.GetLength()+1]; //Deleted in D'tor of struct TimedMsg
+			strcpy(tmsg->Msg,msg.GetBlock());
+			tmsg->SendTo = this;
+			pthread_mutex_lock(&msgmutex);
+			MsgQueue.push_back(tmsg);
+			pthread_mutex_unlock(&msgmutex);
+			if(msg_ready) pthread_cond_signal(&msgcond); //Update
+		} else {
+			SendMsg(msg.GetBlock());
+		}
+	#else 
 		SendMsg(msg.GetBlock());
-	}
+	#endif
 }
 
 bool Game::SendMsg(const std::string msg){
@@ -383,6 +396,7 @@ void * Game::MsgTimer(void * foo){
 		pthread_mutex_unlock(&msgmutex);
 	}
 	pthread_mutex_unlock(&msgmutex);
+	pthread_mutex_destroy(&msgmutex);
 	return NULL;
 }
 

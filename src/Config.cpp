@@ -300,17 +300,17 @@ ScenarioSet::ScenarioSet(ScenarioSet const& base) :
 }
 
 ScenarioSet::~ScenarioSet(){
-	if(ScenPath) delete [] ScenPath;
+	delete [] ScenPath;
 	if(ExtraNames) {
 		while(NameCount--) delete [] ExtraNames[NameCount];
 		delete [] ExtraNames;
 	}
-	if(PW) delete [] PW;
+	delete [] PW;
 }
 
 void ScenarioSet::SetPath(const char * path){
 	if(!Fixed) {
-		if(ScenPath) delete [] ScenPath;
+		delete [] ScenPath;
 		ScenPath = new char [strlen(path)+1];
 		strcpy(ScenPath, path);
 	}
@@ -333,7 +333,7 @@ void ScenarioSet::SetNames(const char * const * names, int count){
 
 void ScenarioSet::SetPW(const char * pw) {
 	if(!Fixed){
-		if(PW) delete [] PW;
+		delete [] PW;
 		PW = new char [strlen(pw) + 1];
 		strcpy(PW, pw);
 	}

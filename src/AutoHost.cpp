@@ -54,7 +54,7 @@ void AutoHost::Work(){
 			ScenQueue.erase(ScenQueue.begin()); 
 		}
 		if(Fails && scn == lastscn) continue;
-		if(delnow) delete lastscn;
+		delete lastscn;
 		CurrentGame = new Game(*this);
 		CurrentGame -> SetScen(scn);
 		StatusStable();
