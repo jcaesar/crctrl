@@ -220,8 +220,10 @@ void Setting::Reload(){
 }
 
 const ScenarioSet * Setting::GetScen(int index){
-	if(0 > index || index >= ScenCount) {return NULL;}
-	return *(index + Scens);
+	int i=0;
+	while(((Scens[i]->GetIndex()) != index) && (i<ScenCount)) ++i;
+	if(i<ScenCount) return Scens[i];
+	return NULL;
 }
 
 const ScenarioSet * Setting::GetScen(){ //Do it by random.
@@ -235,9 +237,7 @@ const ScenarioSet * Setting::GetScen(){ //Do it by random.
 		rnd -= (**ScenInst).GetChance();
 		ScenInst++;
 	}
-	if(ScenInst >= Scens + ScenCount) { //Hmm, what now? SigKill? Reload? Quit?
-		PanicExit(); //raise(SIGSEGV); //If it did not happen earlier.
-	}
+	assert(ScenInst < Scens + ScenCount);
 	UnlockStatus();
 	return (*(ScenInst-1));
 }
@@ -363,8 +363,9 @@ const char * ScenarioSet::GetPW() const {return PW;}
 
 const char * ScenarioSet::GetName(int index /*=0*/) const {
 	const ScenarioSet * readfrom;
-	if(!ExtraNames && (readfrom=GetConfig()->GetScen(index)));
+	if(!ExtraNames && (readfrom=GetConfig()->GetScen(DbIndex)));
 	else readfrom = this;
+	assert(readfrom->DbIndex == DbIndex);
 	if(index < 0 || index >= readfrom->NameCount) return NULL;
 	return *(readfrom->ExtraNames + index);
 }

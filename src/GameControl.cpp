@@ -233,10 +233,12 @@ void Game::Control(){
 				SendMsg("Wie die Fliegen, wie die Fliegen. Pass das naechste mal besser auf, ", regex_ret[1].str().data(), ", du Tropf.\n.", NULL);
 			} else if(regex_match(line, rx::gm_tick0)){
 				SendMsg("/me r0kt!\n", NULL);
-				#ifdef NO_GAME_TIMED_MSGS
-					Halt(10);
-				#endif
-				SendMsg(20, "/set maxplayer 1\n", NULL);
+				if(!Settings.Scen->GetLeague()) {
+					#ifdef NO_GAME_TIMED_MSGS
+						Halt(10);
+					#endif
+					SendMsg(20, "/set maxplayer 1\n", NULL);
+				}
 			}
 		} else if(Status==Load) {
 			if(regex_match(line, rx::gm_go)){
@@ -248,7 +250,7 @@ void Game::Control(){
 			}
 			if(regex_match(line, rx::gm_lobby)){
 				Status=Lobby;
-				SendMsg("/set maxplayer 1337\n", NULL);
+				if(!Settings.Scen->GetLeague()) SendMsg("/set maxplayer 1337\n", NULL);
 			}
 			if(regex_match(line, rx::ms_flood)) {
 				GetOut()->Put(Parent, OutPrefix, " Masterserver complained about too much games from this IP.");
