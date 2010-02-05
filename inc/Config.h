@@ -84,6 +84,7 @@ class Setting : public StatusLocks {
 		void Standard();
 		void Reload();
 		const ScenarioSet * GetScen(int);
+		const ScenarioSet * GetScenByDbIndex(int);
 		const ScenarioSet * GetScen();
 		ScenarioSet * GetScen(const char *);
 		void SetLoginData(const char *, const char *, const char *, const char *);

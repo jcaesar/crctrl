@@ -33,8 +33,10 @@ AutoHost::~AutoHost(){
 	AutoHosts.Remove(this);
 	delete CurrentGame;
 	CurrentGame = NULL;
+	StatusStable();
 	if(!pthread_equal(pthread_self(),tid)) pthread_join(tid, NULL); //And my own thread will end when all that is done. 
 	GetOut()->Put(NULL, OutPrefix, " Terminated.", NULL);
+	StatusUnstable();
 	delete OutPrefix;
 }
 

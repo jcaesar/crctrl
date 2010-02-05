@@ -60,7 +60,7 @@ bool Game::SetScen(const char * path){ //DEPRECATED
 bool Game::SetScen(const ScenarioSet * scen){
 	if(!scen) return false;
 	StatusUnstable();
-	if(Settings.Scen) delete Settings.Scen;
+	delete Settings.Scen;
 	Settings.Scen = new ScenarioSet(*scen);
 	StatusStable();
 	return true;
@@ -292,7 +292,7 @@ Game::~Game(){
 	Exit();
 	if(clonk) clonk->Wait(false);
 	delete clonk;
-	if(Settings.Scen) delete Settings.Scen;
+	delete Settings.Scen;
 }
 
 void Game::Deinit(){

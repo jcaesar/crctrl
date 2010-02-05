@@ -26,6 +26,7 @@ Process::~Process() {
 	Kill(true);
 	delete [] args;
 	delete [] path;
+	delete [] dir;
 }
 
 bool Process::SetArguments(const char * spath, const char * sargs, const char * sdir) {

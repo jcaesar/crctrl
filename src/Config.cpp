@@ -138,7 +138,7 @@ void Setting::Reload(){
 					if(cnt < 0) break; //goodness knows... and SEG is smarter than SQL.
 					ScenCount++;
 					int len=row[0].length();
-					char * scn = new char [len+1]; *(scn+len)=0; //Gets deleted from Scenclass.
+					char * scn = new char [len+1]; *(scn+len)=0;
 					strncpy(scn,row[0].c_str(),len);
 					(*(Scens + cnt)) = new ScenarioSet(int(row[4]));
 					(*(Scens + cnt))->SetPath(scn);
@@ -147,6 +147,7 @@ void Setting::Reload(){
 					(*(Scens + cnt))->SetTime(int(row[3]));
 					//Fix later.
 					ChanceTotal += (**(Scens + cnt)).GetChance();
+					delete [] scn;
 				}
 				mysqlpp::Query query4 = conn.query("SELECT ScenIndex, Name FROM ScenarioNames"); 
 				if(mysqlpp::StoreQueryResult names = query4.store()){ //What follows here is fucking sillily done. But, what works works.
@@ -219,7 +220,12 @@ void Setting::Reload(){
 	StatusStable();
 }
 
-const ScenarioSet * Setting::GetScen(int index){
+const ScenarioSet * Setting::GetScen(int index) {
+	if(0 > index || index >= ScenCount) {return NULL;}
+	return *(index + Scens);
+}
+
+const ScenarioSet * Setting::GetScenByDbIndex(int index) {
 	int i=0;
 	while(((Scens[i]->GetIndex()) != index) && (i<ScenCount)) ++i;
 	if(i<ScenCount) return Scens[i];
@@ -236,8 +242,8 @@ const ScenarioSet * Setting::GetScen(){ //Do it by random.
 	while(rnd >= 0){
 		rnd -= (**ScenInst).GetChance();
 		ScenInst++;
+		assert(ScenInst < Scens + ScenCount);
 	}
-	assert(ScenInst < Scens + ScenCount);
 	UnlockStatus();
 	return (*(ScenInst-1));
 }
@@ -363,7 +369,7 @@ const char * ScenarioSet::GetPW() const {return PW;}
 
 const char * ScenarioSet::GetName(int index /*=0*/) const {
 	const ScenarioSet * readfrom;
-	if(!ExtraNames && (readfrom=GetConfig()->GetScen(DbIndex)));
+	if(!ExtraNames && (readfrom=GetConfig()->GetScenByDbIndex(DbIndex)));
 	else readfrom = this;
 	assert(readfrom->DbIndex == DbIndex);
 	if(index < 0 || index >= readfrom->NameCount) return NULL;
