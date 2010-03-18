@@ -55,12 +55,12 @@ int main(int argc, char ** argv)
 		if(!pw) std::cerr << "Warning. No password specified. Use pw:<>"  << std::endl;
 		if(!db || !usr) exit(3);
 	#endif
-	GetConfig()->SetLoginData(usr,pw,db,addr);
-	GetConfig()->Reload();
-	while(create_autohost--) new AutoHost();
 	Stream * io = new Stream();
 	Stream::GetStandardIO(*io);
 	new UserControl(io);
+	GetConfig()->SetLoginData(usr,pw,db,addr);
+	GetConfig()->Reload();
+	while(create_autohost--) new AutoHost();
 	ListenSocket queryport;
 	if(!queryport.Init(GetConfig()->QueryPort)) {
 		std::cerr << "Could not listen to " << GetConfig()->QueryPort << std::endl;
