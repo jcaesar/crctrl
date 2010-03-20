@@ -42,17 +42,14 @@ AutoHost::~AutoHost(){
 
 void AutoHost::Work(){
 	GetOut()->Put(NULL, OutPrefix, " New AutoHost working!", NULL);
-	const ScenarioSet * scn = NULL; const ScenarioSet * lastscn; bool del = true, delnow;
+	const ScenarioSet * scn = NULL; const ScenarioSet * lastscn;
 	StatusUnstable();
 	while(work){
 		lastscn = scn;
-		delnow = del;
 		if(ScenQueue.empty()) {
-			scn = GetConfig()->GetScen();
-			del = false;
+			scn = new ScenarioSet(*GetConfig()->GetScen());
 		} else {
-			try {scn = ScenQueue.at(0);} //Vector sux, dunno why.
-			catch (...) {continue;}
+			scn = ScenQueue.at(0);
 			ScenQueue.erase(ScenQueue.begin()); 
 		}
 		if(Fails && scn == lastscn) continue;
@@ -76,7 +73,6 @@ void AutoHost::Work(){
 		}
 		delete CurrentGame;
 	}
-	StatusUnstable();
 }
 
 Game * AutoHost::GetGame(){

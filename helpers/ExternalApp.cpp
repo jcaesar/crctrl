@@ -102,7 +102,7 @@ bool Process::Start() {
 		waitpid(child, NULL, 0);
 		StreamIn pidread (fdtmp[0]);
 		std::string pids;
-		if(pidread.ReadLine(&pids)) pid = atoi(pids.c_str());
+		if(pidread.ReadLine(pids)) pid = atoi(pids.c_str());
 		else pid = 0;
 		close(fdtmp[0]);
 		close(fd1[0]);

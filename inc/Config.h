@@ -16,9 +16,10 @@ class ScenarioSet {
 		float League;
 		float HostChance;
 		bool Fixed;
-		const int DbIndex;
 	public:
-		ScenarioSet(int index);
+		const int DbIndex; //Index, the mysqldb gives us (Stored for whatever)
+		const int IntIndex; //Internal index, for access.
+		ScenarioSet(int dbindex, int intindex);
 		ScenarioSet(ScenarioSet const& base);
 		~ScenarioSet();
 		void SetPath(const char * path);
@@ -83,9 +84,9 @@ class Setting : public StatusLocks {
 		Setting();
 		void Standard();
 		void Reload();
-		const ScenarioSet * GetScen(int);
-		const ScenarioSet * GetScenByDbIndex(int);
-		const ScenarioSet * GetScen();
+		ScenarioSet * GetScen(int);
+		ScenarioSet * GetScenByDbIndex(int);
+		ScenarioSet * GetScen();
 		ScenarioSet * GetScen(const char *);
 		void SetLoginData(const char *, const char *, const char *, const char *);
 		const char * GetBan(const char *);

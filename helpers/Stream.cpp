@@ -24,8 +24,8 @@ StreamIn::~StreamIn(){
 	Close();
 }
 
-bool StreamIn::ReadLine(std::string * line){
-	std::stringstream ss;
+bool StreamIn::ReadLine(std::string & line){
+	std::ostringstream ss;
 	do{
 		if(buffaddr+rv > buff){ //I left things behind, last time.
 			buffaddr2=buff;
@@ -48,16 +48,16 @@ bool StreamIn::ReadLine(std::string * line){
 				Close();
 			#endif
 			try {
-				*line = ss.str();
+				line = ss.str();
 			} catch (...) {
-				*line = "";
+				line = "";
 			}
 			return false;
 		}
 		buff = buffaddr;
 		*(buff+rv)=0;
 	} while(*buff!=0);
-	*line = ss.str();
+	line = ss.str();
 	return true;
 }
 

@@ -97,6 +97,7 @@ void Setting::Reload(){
 	Standard();
 	mysqlpp::Connection conn(false);
 	if (conn.connect(Login.db, Login.addr, Login.usr, Login.pw)) {
+		//Parse options
 		mysqlpp::Query query1 = conn.query("SELECT Identifier, Value FROM Settings");
 		if (mysqlpp::UseQueryResult res = query1.use()) {
 			while(mysqlpp::Row row=res.fetch_row()) { //What about an hash-array and clean getters?
@@ -129,48 +130,44 @@ void Setting::Reload(){
 			int cnt = int(res.fetch_row()[0]);
 			while(res.fetch_row());
 			if(cnt == 0) GetOut()->Put(NULL, "Warning: Loading empty scenario list.");
-			mysqlpp::Query query3 = conn.query("SELECT Path, HostChance, LeagueChance, LobbyTime, ScenIndex FROM ScenarioList");
+			//Parse Scens.
+			mysqlpp::Query query3 = conn.query("SELECT Path, HostChance, LeagueChance, LobbyTime, ScenIndex FROM ScenarioList ORDER BY ScenIndex DESC");
 			if(mysqlpp::UseQueryResult res = query3.use()){
 				Scens = new ScenarioSet * [cnt];
 				ChanceTotal=0;
 				while(mysqlpp::Row row=res.fetch_row()) {
 					cnt--; 
 					if(cnt < 0) break; //goodness knows... and SEG is smarter than SQL.
-					ScenCount++;
-					int len=row[0].length();
-					char * scn = new char [len+1]; *(scn+len)=0;
-					strncpy(scn,row[0].c_str(),len);
-					(*(Scens + cnt)) = new ScenarioSet(int(row[4]));
-					(*(Scens + cnt))->SetPath(scn);
+					(*(Scens + cnt)) = new ScenarioSet(int(row[4]), ScenCount);
+					(*(Scens + cnt))->SetPath(row[0].c_str());
 					(*(Scens + cnt))->SetChance(float(row[1]));
 					(*(Scens + cnt))->SetLeague(float(row[2]));
 					(*(Scens + cnt))->SetTime(int(row[3]));
-					//Fix later.
+					ScenCount++;
+					//Fix() later.
 					ChanceTotal += (**(Scens + cnt)).GetChance();
-					delete [] scn;
 				}
-				mysqlpp::Query query4 = conn.query("SELECT ScenIndex, Name FROM ScenarioNames"); 
-				if(mysqlpp::StoreQueryResult names = query4.store()){ //What follows here is fucking sillily done. But, what works works.
-					for(cnt=0; cnt<ScenCount; cnt++){
-						int index=Scens[cnt]->GetIndex();
-						int namecnt=0;
-						for(int i=names.num_rows()-1; i>=0; i--){
-							if(index==int(names[i][0])) namecnt++;
-						}
-						char ** nameptr = new char * [namecnt];
+				//Parse Scen names
+				mysqlpp::Query query4 = conn.query("SELECT ScenIndex, Name FROM ScenarioNames ORDER BY ScenIndex DESC"); 
+				if(mysqlpp::StoreQueryResult names = query4.store()){
+					int i=names.num_rows()-1;
+					while(i>=0){
+						int curindex = names[i][0];
+						int j = i-1;
+						while(j>=0 && int(names[j][0]) == curindex) --j;
+						char ** nameptr = new char * [i-j];
 						char ** ptrinst; ptrinst = nameptr;
-						for(int i=names.num_rows()-1; i>=0; i--){
-							if(index==int(names[i][0])) {
-								int len=names[i][1].length()+1;
-								*ptrinst = new char[len];
-								strncpy(*ptrinst, names[i][1].c_str(), len);
-								ptrinst++;
-							}
+						while(i > j) {
+							int len=names[i][1].length()+1;
+							*ptrinst = new char[len];
+							strncpy(*ptrinst, names[i][1].c_str(), len);
+							ptrinst++; i--;
 						}
-						Scens[cnt]->SetNames(nameptr, namecnt);
-						while(namecnt--) delete [] nameptr[namecnt];
+						ScenarioSet * scn = GetScenByDbIndex(curindex);
+						scn->SetNames(nameptr, ptrinst-nameptr);
+						scn->Fix();
+						while((ptrinst--)-nameptr) delete [] *ptrinst;
 						delete [] nameptr;
-						Scens[cnt]->Fix();
 					}
 				} else {
 					std::cerr << "Error in naming scenarios: " << query4.error() << std::endl;
@@ -220,29 +217,29 @@ void Setting::Reload(){
 	StatusStable();
 }
 
-const ScenarioSet * Setting::GetScen(int index) {
+ScenarioSet * Setting::GetScen(int index) {
 	if(0 > index || index >= ScenCount) {return NULL;}
 	return *(index + Scens);
 }
 
-const ScenarioSet * Setting::GetScenByDbIndex(int index) {
+ScenarioSet * Setting::GetScenByDbIndex(int index) {
 	int i=0;
 	while(((Scens[i]->GetIndex()) != index) && (i<ScenCount)) ++i;
 	if(i<ScenCount) return Scens[i];
 	return NULL;
 }
 
-const ScenarioSet * Setting::GetScen(){ //Do it by random.
+ScenarioSet * Setting::GetScen(){ //Do it by random.
 	LockStatus();
 	if(ScenCount == 0) return NULL; //No Scen = Silly person. This is gonna fail later, I should perhaps error earlier when no scen is given.
-	if(ScenCount == 1) return *Scens;  //One Scen = Bla, that's not gonna segv anymore, so noone testing could be annoyed.
+	if(ScenCount == 1) return *Scens;  //One Scen = Bla, that's not gonna segv directly anymore, so noone testing could be annoyed.
 	srand((unsigned)time(NULL) ^ rand()); 
 	double rnd=fmod((float)rand(), ChanceTotal*16) / 16;
 	ScenarioSet ** ScenInst = Scens;
 	while(rnd >= 0){
+		assert(ScenInst < Scens + ScenCount);
 		rnd -= (**ScenInst).GetChance();
 		ScenInst++;
-		assert(ScenInst < Scens + ScenCount);
 	}
 	UnlockStatus();
 	return (*(ScenInst-1));
@@ -280,7 +277,7 @@ const char * Setting::GetBan(const char * name){
 
 
 
-ScenarioSet::ScenarioSet(int index) :
+ScenarioSet::ScenarioSet(int dbindex, int intindex) :
 	ScenPath(NULL),
 	ExtraNames(NULL),
 	PW(NULL),
@@ -288,10 +285,12 @@ ScenarioSet::ScenarioSet(int index) :
 	LobbyTime(GetConfig()->LobbyTime),
 	League(GetConfig()->League),
 	Fixed(false),
-	DbIndex(index)
+	DbIndex(dbindex),
+	IntIndex(intindex)
 {}
 
 ScenarioSet::ScenarioSet(ScenarioSet const& base) :
+	ScenPath (NULL),
 	ExtraNames (NULL),
 	PW(NULL),
 	NameCount (0),
@@ -299,11 +298,9 @@ ScenarioSet::ScenarioSet(ScenarioSet const& base) :
 	League (base.League),
 	HostChance (base.HostChance),
 	Fixed(false),
-	DbIndex(base.DbIndex)
-{ //Names and pw will be ignored
-	ScenPath = new char[strlen(base.ScenPath) + 1];
-	strcpy(ScenPath, base.ScenPath);
-}
+	DbIndex(base.DbIndex),
+	IntIndex(base.IntIndex)
+{}
 
 ScenarioSet::~ScenarioSet(){
 	delete [] ScenPath;
@@ -355,7 +352,11 @@ void ScenarioSet::Fix(){ Fixed=true; }
 
 bool ScenarioSet::IsFixed() const {return Fixed; }
 
-const char * ScenarioSet::GetPath() const {return ScenPath; }
+const char * ScenarioSet::GetPath() const {
+	if(ScenPath) return ScenPath;
+	assert(GetConfig()->GetScen(IntIndex));
+	return GetConfig()->GetScen(IntIndex)->ScenPath;
+}
 
 int ScenarioSet::GetIndex() const {return DbIndex;}
 
@@ -369,10 +370,10 @@ const char * ScenarioSet::GetPW() const {return PW;}
 
 const char * ScenarioSet::GetName(int index /*=0*/) const {
 	const ScenarioSet * readfrom;
-	if(!ExtraNames && (readfrom=GetConfig()->GetScenByDbIndex(DbIndex)));
+	if(!ExtraNames && (readfrom=GetConfig()->GetScen(IntIndex)));
 	else readfrom = this;
-	assert(readfrom->DbIndex == DbIndex);
-	if(index < 0 || index >= readfrom->NameCount) return NULL;
+	assert(readfrom && readfrom->IntIndex == IntIndex);
+	if(!readfrom || index < 0 || index >= readfrom->NameCount) return NULL;
 	return *(readfrom->ExtraNames + index);
 }
 

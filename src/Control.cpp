@@ -33,7 +33,7 @@ UserControl::~UserControl() {
 
 void UserControl::Work(){
 	std::string cmd;
-	while(conn->ReadLine(&cmd)){
+	while(conn->ReadLine(cmd)){
 		if(!cmd.compare("%auto")) {
 			sel = new AutoHost(); //Note that sel is not a permanent saving var.
 		} else if(!cmd.compare("%end")) {

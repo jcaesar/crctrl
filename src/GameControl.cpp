@@ -119,7 +119,7 @@ void Game::Start(){
 void Game::Control(){
 	std::string line;
 	boost::smatch regex_ret;
-	while(clonk->ReadLine(&line)){
+	while(clonk->ReadLine(line)){
 		StatusUnstable();
 		GetOut()->Put(Parent, OutPrefix, " ", line.c_str(), NULL);
 		//Scan for events
