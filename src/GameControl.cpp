@@ -253,7 +253,7 @@ void Game::Control(){
 				if(!Settings.Scen->GetLeague()) SendMsg("/set maxplayer 1337\n", NULL);
 			}
 			if(regex_match(line, rx::ms_flood)) {
-				GetOut()->Put(Parent, OutPrefix, " Masterserver complained about too much games from this IP.");
+				GetOut()->Put(Parent, OutPrefix, " Masterserver complained about too much games from this IP.", NULL);
 				Halt(300);
 				Fail();
 			}
