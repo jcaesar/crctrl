@@ -76,6 +76,7 @@ class StringCollector{
 			return true;
 		}
 		inline StringCollector& operator+=(const char * push){Push(push); return *this;}
+		inline StringCollector& operator<<(const char * push){Push(push); return *this;}
 		inline StringCollector& operator+=(const int push)   {Push(push); return *this;}
 };
 

@@ -73,6 +73,7 @@ void AutoHost::Work(){
 		}
 		delete CurrentGame;
 	}
+	StatusStable();
 }
 
 Game * AutoHost::GetGame(){
@@ -96,12 +97,12 @@ void * AutoHost::ThreadWrapper(void * p){
 }
 
 void AutoHost::LockStatus() {
-	CurrentGame->LockStatus();
+	if(CurrentGame) CurrentGame->LockStatus();
 	StatusLocks::LockStatus();
 }
 
 void AutoHost::UnlockStatus() {
-	CurrentGame->UnlockStatus();
+	if(CurrentGame) CurrentGame->UnlockStatus();
 	StatusLocks::UnlockStatus();
 }
 

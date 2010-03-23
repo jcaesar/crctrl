@@ -18,7 +18,6 @@ class Game : public StatusLocks
 {
 	private:
 		Process * clonk;
-		pthread_t worker;
 		struct{
 			bool SignOn;
 			bool Record;
@@ -32,6 +31,7 @@ class Game : public StatusLocks
 		GameStatus Status;
 		unsigned int ExecTrials;
 		bool cleanup;
+		pthread_mutex_t controlmutex;
 		void Start(const char *);
 		bool Fail();
 		void Control();

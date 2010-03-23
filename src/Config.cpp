@@ -131,14 +131,14 @@ void Setting::Reload(){
 			while(res.fetch_row());
 			if(cnt == 0) GetOut()->Put(NULL, "Warning: Loading empty scenario list.");
 			//Parse Scens.
-			mysqlpp::Query query3 = conn.query("SELECT Path, HostChance, LeagueChance, LobbyTime, ScenIndex FROM ScenarioList ORDER BY ScenIndex DESC");
+			mysqlpp::Query query3 = conn.query("SELECT Path, HostChance, LeagueChance, LobbyTime, ScenIndex FROM ScenarioList");
 			if(mysqlpp::UseQueryResult res = query3.use()){
 				Scens = new ScenarioSet * [cnt];
 				ChanceTotal=0;
 				while(mysqlpp::Row row=res.fetch_row()) {
 					cnt--; 
 					if(cnt < 0) break; //goodness knows... and SEG is smarter than SQL.
-					(*(Scens + cnt)) = new ScenarioSet(int(row[4]), ScenCount);
+					(*(Scens + cnt)) = new ScenarioSet(int(row[4]), cnt);
 					(*(Scens + cnt))->SetPath(row[0].c_str());
 					(*(Scens + cnt))->SetChance(float(row[1]));
 					(*(Scens + cnt))->SetLeague(float(row[2]));
@@ -148,7 +148,7 @@ void Setting::Reload(){
 					ChanceTotal += (**(Scens + cnt)).GetChance();
 				}
 				//Parse Scen names
-				mysqlpp::Query query4 = conn.query("SELECT ScenIndex, Name FROM ScenarioNames ORDER BY ScenIndex DESC"); 
+				mysqlpp::Query query4 = conn.query("SELECT ScenIndex, Name FROM ScenarioNames ORDER BY ScenIndex ASC"); 
 				if(mysqlpp::StoreQueryResult names = query4.store()){
 					int i=names.num_rows()-1;
 					while(i>=0){

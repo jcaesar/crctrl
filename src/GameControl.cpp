@@ -34,6 +34,11 @@ Game::Game(AutoHost & parent) :
 	Settings.SignOn=GetConfig()->SignOn;
 	Settings.Record=GetConfig()->Record;
 	Status=Setting;
+	pthread_mutexattr_t attr;
+	pthread_mutexattr_init(&attr);
+	pthread_mutexattr_settype(&attr,PTHREAD_MUTEX_RECURSIVE);
+	pthread_mutex_init(&controlmutex, &attr);
+	pthread_mutexattr_destroy(&attr);
 }
 
 void Game::Init() {
@@ -101,7 +106,6 @@ void Game::Start(){
 	cmd += Settings.Scen->GetPath();
 	cmd += "\"";
 	StatusUnstable();
-	worker = pthread_self();
 	delete clonk;
 	clonk = new Process();
 	char * fullpath = new char[strlen(GetConfig()->Path) + 7];
@@ -117,6 +121,7 @@ void Game::Start(){
 }
 
 void Game::Control(){
+	pthread_mutex_lock(&controlmutex);
 	std::string line;
 	boost::smatch regex_ret;
 	while(clonk->ReadLine(line)){
@@ -246,7 +251,7 @@ void Game::Control(){
 			}
 		} else if(Status==PreLobby) {
 			if(regex_match(line, rx::ctrl_err) || regex_match(line, rx::gm_exit)) {
-				StatusStable(); Fail(); return;
+				StatusStable(); Fail(); pthread_mutex_unlock(&controlmutex); return;
 			}
 			if(regex_match(line, rx::gm_lobby)){
 				Status=Lobby;
@@ -263,7 +268,8 @@ void Game::Control(){
 	StatusUnstable();
 	delete clonk; clonk = NULL;
 	StatusStable();
-	if(Status==PreLobby) Fail(); 
+	if(Status==PreLobby) Fail();
+	pthread_mutex_unlock(&controlmutex);
 	return;
 }
 
@@ -291,8 +297,12 @@ Game::~Game(){
 	StatusUnstable();
 	Exit();
 	if(clonk) clonk->Wait(false);
-	delete clonk;
+	delete clonk; clonk = NULL;
 	delete Settings.Scen;
+	StatusStable();
+	pthread_mutex_lock(&controlmutex);
+	StatusUnstable();
+	pthread_mutex_destroy(&controlmutex);
 }
 
 void Game::Deinit(){
@@ -315,8 +325,8 @@ bool Game::Fail(){
 		return true;
 	} else {
 		StatusStable();
-		Halt(5);
 		if(cleanup) return true;
+		Halt(5);
 		Start();
 		return false;
 	}

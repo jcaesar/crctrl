@@ -2,7 +2,6 @@
 #include "Stream.h"
 
 #include <stdarg.h>
-#include <sstream>
 #include "StringCollector.hpp"
 
 #ifdef unix
@@ -25,7 +24,7 @@ StreamIn::~StreamIn(){
 }
 
 bool StreamIn::ReadLine(std::string & line){
-	std::ostringstream ss;
+	StringCollector sc;
 	do{
 		if(buffaddr+rv > buff){ //I left things behind, last time.
 			buffaddr2=buff;
@@ -34,10 +33,10 @@ bool StreamIn::ReadLine(std::string & line){
 				*buff=0;
 				buff++;
 				if((buff - buffaddr < STREAM_MAXCHARS) && (*buff == '\r' || *buff == '\n') && *buff != *(buff-1)) buff++; //This will ignore a secondary newline character coming from windows (or a wierd \n\r newline) (But it won't ignore \n\n)
-				ss << buffaddr2;
+				sc << buffaddr2;
 				break;
 			}
-			ss << buffaddr2;
+			sc << buffaddr2;
 		}
 		buff = buffaddr;
 		if(!ReadFinal())
@@ -47,17 +46,19 @@ bool StreamIn::ReadLine(std::string & line){
 			#elif defined unix
 				Close();
 			#endif
-			try {
-				line = ss.str();
-			} catch (...) {
+			if(sc.GetBlock())
+				line = sc.GetBlock();
+			else
 				line = "";
-			}
 			return false;
 		}
 		buff = buffaddr;
 		*(buff+rv)=0;
 	} while(*buff!=0);
-	line = ss.str();
+	if(sc.GetBlock())
+		line = sc.GetBlock();
+	else
+		line = "";
 	return true;
 }
 
