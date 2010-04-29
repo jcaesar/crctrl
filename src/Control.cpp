@@ -6,6 +6,7 @@
 #include "helpers/StringCollector.hpp"
 #include "helpers/AppManagement.h"
 #include "helpers/Stream.h"
+#include "Exception.h"
 #include "AutoHost.h"
 #include "Config.h"
 #include "GameControl.h"
@@ -35,7 +36,12 @@ void UserControl::Work(){
 	std::string cmd;
 	while(conn->ReadLine(cmd)){
 		if(!cmd.compare("%auto")) {
-			sel = new AutoHost(); //Note that sel is not a permanent saving var.
+			try {
+				sel = new AutoHost(); //Note that sel is not a permanent saving var.
+			} catch(Exception e) {
+				Out.Put(this, "Could not launch AutoHost: ", e.GetError(), NULL);
+				sel = NULL;
+			}
 		} else if(!cmd.compare("%end")) {
 			GetAutoHosts()->DelAll();
 			exit(0);
@@ -87,7 +93,7 @@ void UserControl::PrintStatus(AutoHost * stat /*= NULL*/){
 	}
 }
 
-bool UserControl::Write(void * context, const char * msg){
+bool UserControl::Write(const void * context, const char * msg){
 	if(context == sel || context == this || context == 0)
 		return conn->Write(msg, NULL);
 	else 
@@ -129,7 +135,7 @@ bool OutprintControl::Remove(UserControl * ctrl){
 	return false;
 }
 
-void OutprintControl::Put(void * context, const char * first, ...){
+void OutprintControl::Put(const void * context, const char * first, ...){
 	va_list vl;
 	va_start(vl, first);
 	StringCollector msg(first, false);

@@ -7,6 +7,7 @@ class AutoHost;
 #include "helpers/StatusLocks.h"
 class Game; //#include "GameControl.h"
 class ScenarioSet; //#include "Config.h"
+class UserControl;
 
 
 class AutoHost : public StatusLocks {
@@ -21,7 +22,7 @@ class AutoHost : public StatusLocks {
 		bool work;
 		std::vector <const ScenarioSet*> ScenQueue;
 	public:
-		AutoHost();
+		explicit AutoHost(const UserControl * CreatedBy = NULL);
 		~AutoHost();
 		Game * GetGame();
 		bool Enqueue(const ScenarioSet *);

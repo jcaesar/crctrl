@@ -18,7 +18,7 @@ class UserControl{
 	public:
 		UserControl(Stream *);
 		~UserControl();
-		bool Write(void *, const char *);
+		bool Write(const void *, const char *);
 };
 
 class OutprintControl{
@@ -30,7 +30,7 @@ class OutprintControl{
 		~OutprintControl();
 		void Add(UserControl * ctrl);
 		bool Remove(UserControl * ctrl);
-		void Put(void *, const char *, ...);
+		void Put(const void *, const char *, ...);
 };
 
 OutprintControl * GetOut();

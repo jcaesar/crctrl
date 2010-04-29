@@ -3,6 +3,7 @@
 
 #include <errno.h>
 #include <pthread.h>
+#include "Exception.h"
 #include "GameControl.h"
 #include "Config.h"
 #include "Control.h"
@@ -16,7 +17,11 @@ AutoHostList * GetAutoHosts(){
 #ifdef _MSC_VER
 	#pragma warning (disable: 4355)
 #endif
-AutoHost::AutoHost() : ID(AutoHosts.Add(this)), CurrentGame(NULL), Fails(0), work(true) {
+AutoHost::AutoHost(const UserControl * createdby) : ID(AutoHosts.Add(this)), CurrentGame(NULL), Fails(0), work(true) {
+	if(GetConfig()->ScenCount < 1) {
+		AutoHosts.Remove(this);
+		throw Exception("There are not enough scenarios in the database to start.", createdby);
+	}
 	OutPrefix = new char[11];
 	sprintf(OutPrefix, "a#%d", ID);
 	pthread_create(&tid, NULL, &AutoHost::ThreadWrapper, this);
@@ -52,7 +57,7 @@ void AutoHost::Work(){
 			scn = ScenQueue.at(0);
 			ScenQueue.erase(ScenQueue.begin()); 
 		}
-		if(Fails && scn == lastscn) continue;
+		if(Fails && (scn == lastscn) && ((!GetConfig()->ScenCount) < 2)) continue;
 		delete lastscn;
 		CurrentGame = new Game(*this);
 		CurrentGame -> SetScen(scn);
